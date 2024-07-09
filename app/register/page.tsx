@@ -40,7 +40,7 @@ export default function Register() {
       <main className="container mx-auto px-4 bg-white text-gray-900">
         <section className="py-12 text-center">
           <h1 className="text-5xl font-bold mb-4">会員登録</h1>
-          <p className="text-xl mb-8">料理人としてのキャリアをスタートしましょう。</p>
+          <p className="text-xl mb-8">イネブラをスタートしましょう。</p>
           <form className="max-w-md mx-auto" onSubmit={handleRegister}>
             <div className="mb-4">
               <label className="block text-left mb-2" htmlFor="email">メールアドレス</label>
