@@ -38,8 +38,11 @@ export default function Home() {
                 <Link href="/properties" className="btn-primary inline-block">
                   物件を探す
                 </Link>
-                <Link href="/services" className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full text-lg hover:bg-white hover:text-[rgb(var(--primary-color))] transition duration-300 inline-block mt-4 md:mt-0">
+                <Link href="/services" className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full text-lg hover:bg-white hover:text-blue-600 transition duration-300 inline-block mt-4 md:mt-0">
                   サービス詳細
+                </Link>
+                <Link href="/contact" className="bg-white text-blue-600 px-8 py-3 rounded-full text-lg hover:bg-blue-100 transition duration-300 inline-block mt-4 md:mt-0">
+                  お問い合わせ
                 </Link>
               </div>
             </div>
@@ -96,12 +99,56 @@ export default function Home() {
                 { name: '空間デザイン', icon: FaPaintBrush, description: '魅力的で快適な空間づくりで、宿泊者の満足度を高めます。' },
                 { name: '運営サポート', icon: FaHandsHelping, description: '法規制対応から集客まで、運営全般をサポートします。' }
               ].map((service) => (
-                <div key={service.name} className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition duration-300 text-center">
+<div key={service.name} className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition duration-300 text-center">
                   {React.createElement(service.icon, { className: "text-4xl mb-4 mx-auto text-blue-600" })}
                   <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
-                  <p className="text-gray-600">{service.description}</p>
+                  <p className="text-gray-600 mb-4">{service.description}</p>
+                  <Link href={`/services#${service.name}`} className="text-blue-600 hover:underline">
+                    詳細を見る
+                  </Link>
                 </div>
               ))}
+            </div>
+            <div className="text-center mt-12">
+              <Link href="/services" className="bg-blue-600 text-white px-6 py-3 rounded-full text-lg hover:bg-blue-700 transition duration-300">
+                すべてのサービスを見る
+              </Link>
+            </div>
+          </section>
+
+          <section className="py-16 px-4 bg-white">
+            <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">イネブラの強み</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              <div className="bg-gray-50 p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-4">豊富な経験</h3>
+                <p className="text-gray-600">多数の物件管理実績と、業界をリードする専門知識を持つ経験豊富なチーム</p>
+              </div>
+              <div className="bg-gray-50 p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-4">革新的なテクノロジー</h3>
+                <p className="text-gray-600">最新のデジタルツールとAIを活用し、効率的な運営と顧客満足度の向上を実現</p>
+              </div>
+              <div className="bg-gray-50 p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-4">カスタマイズされたソリューション</h3>
+                <p className="text-gray-600">各物件のユニークなニーズに合わせた、柔軟かつ効果的なサービス提供</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="py-16 px-4 bg-gray-100">
+            <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">お客様の声</h2>
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <p className="text-gray-600 mb-4">&quot;イネブラのサービスのおかげで、物件の稼働率が大幅に向上しました。プロフェッショナルなサポートに感謝しています。&quot;</p>
+                <p className="font-semibold">田中 様 - 東京都内の物件オーナー</p>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <p className="text-gray-600 mb-4">&quot;デジタル化支援により、予約管理が格段に楽になりました。顧客満足度も上がり、リピーターが増えています。&quot;</p>
+                <p className="font-semibold">佐藤 様 - 京都市内の町家オーナー</p>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <p className="text-gray-600 mb-4">&quot;空間デザインのアドバイスが素晴らしかったです。お客様からの評価も上がり、SNSでの口コミも増えました。&quot;</p>
+                <p className="font-semibold">鈴木 様 - 沖縄のヴィラオーナー</p>
+              </div>
             </div>
           </section>
 
@@ -145,12 +192,28 @@ export default function Home() {
           </section>
 
           <section className="py-16 px-4 bg-gray-100">
-            <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-semibold mb-8">お問い合わせ</h2>
-              <p className="text-xl mb-8">民泊・簡易宿泊事業でのお悩みやご相談は、お気軽にイネブラまでご連絡ください</p>
-              <Link href="/contact" className="bg-blue-600 text-white px-8 py-3 rounded-full text-lg hover:bg-blue-700 transition duration-300 inline-block">
-                お問い合わせはこちら
-              </Link>
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-semibold mb-8 text-center">お問い合わせ</h2>
+              <p className="text-xl mb-8 text-center">民泊・簡易宿泊事業でのお悩みやご相談は、お気軽にイネブラまでご連絡ください</p>
+              <form className="bg-white p-8 rounded-lg shadow-md">
+                <div className="mb-4">
+                  <label htmlFor="name" className="block text-gray-700 text-sm font-bold mb-2">お名前</label>
+                  <input type="text" id="name" name="name" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="email" className="block text-gray-700 text-sm font-bold mb-2">メールアドレス</label>
+                  <input type="email" id="email" name="email" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
+                </div>
+                <div className="mb-6">
+                  <label htmlFor="message" className="block text-gray-700 text-sm font-bold mb-2">メッセージ</label>
+                  <textarea id="message" name="message" rows={4} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required></textarea>
+                </div>
+                <div className="flex items-center justify-between">
+                  <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300">
+                    送信する
+                  </button>
+                </div>
+              </form>
             </div>
           </section>
         </main>

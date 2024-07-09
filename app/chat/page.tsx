@@ -1,32 +1,82 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { app } from '../../lib/firebase';
+import { useState, useEffect } from 'react';
+import { User } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, addDoc, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { IoSend } from 'react-icons/io5';
 import styles from './Chat.module.css';
 
+interface Message {
+  text: string;
+  from: 'user' | 'bot';
+  createdAt: Date;
+}
+
 export default function Home() {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const auth = getAuth(app);
-    onAuthStateChanged(auth, (user) => setUser(user));
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+
+    return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc'), limit(50));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const newMessages = snapshot.docs.map(doc => doc.data() as Message).reverse();
+        setMessages(newMessages);
+      });
+
+      return () => unsubscribe();
+    }
+  }, [user]);
+
   const sendMessage = async () => {
-    if (!user) return;
-    const idToken = await user.getIdToken();
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: input, idToken }),
-    });
-    const data = await res.json();
-    setMessages([...messages, { text: input, from: 'user' }, ...data.map(d => ({ text: d.text, from: 'bot' }))]);
-    setInput('');
+    if (!user || !input.trim()) return;
+
+    const newMessage: Message = {
+      text: input,
+      from: 'user',
+      createdAt: new Date()
+    };
+
+    try {
+      await addDoc(collection(db, 'messages'), newMessage);
+
+      // ここでボットの応答を生成するCloud Functionを呼び出す
+      const botResponse = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
+        },
+        body: JSON.stringify({ message: input }),
+      });
+
+      const botData = await botResponse.json() as { text: string }[];
+      
+      for (const botMessage of botData) {
+        await addDoc(collection(db, 'messages'), {
+          text: botMessage.text,
+          from: 'bot',
+          createdAt: new Date()
+        });
+      }
+
+      setInput('');
+    } catch (error) {
+      console.error("メッセージの送信中にエラーが発生しました:", error);
+      alert("メッセージの送信に失敗しました。もう一度お試しください。");
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

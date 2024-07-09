@@ -15,17 +15,7 @@ export default function RootLayout({
         <meta name="keywords" content={metadata.keywords} />
       </Head>
       <body>
-        <header>
-          <nav>
-            <ul>
-              <li><Link href="/">ホーム</Link></li>
-              <li><Link href="/services">サービス</Link></li>
-              <li><Link href="/about">会社概要</Link></li>
-              <li><Link href="/contact">お問い合わせ</Link></li>
-            </ul>
-          </nav>
-        </header>
-        <main>{children}</main>
+        {children}
       </body>
     </html>
   )

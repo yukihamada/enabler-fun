@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../layout';
 import { db } from '../../../lib/firebase'
-import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Loader from '../components/Loader';
@@ -30,9 +30,9 @@ const Employers = () => {
   const fetchEmployers = async () => {
     try {
       const employersCollection = collection(db, 'employers');
-      const employersSnapshot = await getDocs(employersCollection);
-      const employersList = employersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setEmployers(employersList as Employer[]);
+      const snapshot = await getDocs(employersCollection);
+      const employersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employer));
+      setEmployers(employersList);
     } catch (error) {
       console.error("雇用主の取得中にエラーが発生しました:", error);
       alert("雇用主の取得に失敗しました。ページを再読み込みしてください。");
@@ -66,7 +66,8 @@ const Employers = () => {
     if (window.confirm('本当にこの雇用主を削除しますか？')) {
       setIsSubmitting(true);
       try {
-        await deleteDoc(doc(db, 'employers', id));
+        const employerDoc = doc(db, 'employers', id);
+        await deleteDoc(employerDoc);
         await fetchEmployers();
         alert('雇用主が正常に削除されました。');
       } catch (error) {
