@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '../../../lib/firebase';
-import { collection, addDoc, getDocs, query, limit } from 'firebase/firestore';
+import { supabase } from '../../../lib/supabaseClient';
 
 export async function GET(request: Request) {
   try {
@@ -8,19 +7,19 @@ export async function GET(request: Request) {
     const limitParam = searchParams.get('limit');
     const limitValue = limitParam ? parseInt(limitParam, 10) : 100;
 
-    const jobsCollection = collection(db, 'jobs');
-    const q = query(jobsCollection, limit(limitValue));
-    const querySnapshot = await getDocs(q);
+const { data: jobs, error } = await supabase
+      .from('jobs')
+      .select('*')
+      .limit(limitValue);
 
-    const jobs = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    if (error) {
+      throw error;
+    }
 
     return NextResponse.json(jobs);
   } catch (error) {
-    console.error('求人情報の取得中にエラーが発生しました:', error);
-    return NextResponse.json({ error: '求人情報の取得中にエラーが発生しました。' }, { status: 500 });
+console.error('情報の取得中にエラーが発生しました:', error);
+return NextResponse.json({ error: '情報の取得中にエラーが発生しました。' }, { status: 500 });
   }
 }
 
@@ -42,16 +41,22 @@ export async function POST(request: Request) {
       }
     }
 
-    // Firestoreに求人情報を追加
-    const jobsCollection = collection(db, 'jobs');
-    const docRef = await addDoc(jobsCollection, jobData);
+// Supabaseに情報を追加
+    const { data, error } = await supabase
+      .from('jobs')
+      .insert(jobData)
+      .single();
 
-    // 追加された求人情報のURLを生成
-    const jobUrl = `https://chef-career.jp/jobs/${docRef.id}`;
+    if (error) {
+      throw error;
+    }
 
-    return NextResponse.json({ message: '求人情報が正常に登録されました。', url: jobUrl }, { status: 201 });
+    // 追加された情報のURLを生成
+    const jobUrl = `https://chef-career.jp/jobs/${data.id}`;
+
+return NextResponse.json({ message: '情報が正常に登録されました。', url: jobUrl }, { status: 201 });
   } catch (error) {
-    console.error('求人情報の登録中にエラーが発生しました:', error);
-    return NextResponse.json({ error: '求人情報の登録中にエラーが発生しました。' }, { status: 500 });
+console.error('情報の登録中にエラーが発生しました:', error);
+return NextResponse.json({ error: '情報の登録中にエラーが発生しました。' }, { status: 500 });
   }
 }

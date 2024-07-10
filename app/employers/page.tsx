@@ -61,7 +61,7 @@ export default function Employers() {
               <h3 className="text-2xl font-semibold mb-4 text-blue-800">ベーシックプラン</h3>
               <p className="text-4xl font-bold mb-6 text-blue-600">¥30,000<span className="text-xl font-normal">/月</span></p>
               <ul className="list-none mb-4">
-                <li className="flex items-center mb-2"><FaCheck className="text-green-500 mr-2" /> 求人掲載 5件/月</li>
+
                 <li className="flex items-center mb-2"><FaCheck className="text-green-500 mr-2" /> 基本的な応募者管理</li>
                 <li className="flex items-center mb-2"><FaCheck className="text-green-500 mr-2" /> メールサポート</li>
               </ul>
@@ -71,7 +71,7 @@ export default function Employers() {
               <h3 className="text-2xl font-semibold mb-4 text-blue-800">スタンダードプラン</h3>
               <p className="text-4xl font-bold mb-6 text-blue-600">¥50,000<span className="text-xl font-normal">/月</span></p>
               <ul className="list-none mb-4">
-                <li className="flex items-center mb-2"><FaCheck className="text-green-500 mr-2" /> 求人掲載 10件/月</li>
+
                 <li className="flex items-center mb-2"><FaCheck className="text-green-500 mr-2" /> 高度な応募者管理</li>
                 <li className="flex items-center mb-2"><FaCheck className="text-green-500 mr-2" /> 電話・メールサポート</li>
                 <li className="flex items-center mb-2"><FaCheck className="text-green-500 mr-2" /> 採用活動コンサルティング</li>
@@ -81,7 +81,7 @@ export default function Employers() {
               <h3 className="text-2xl font-semibold mb-4 text-blue-800">プレミアムプラン</h3>
               <p className="text-4xl font-bold mb-6 text-blue-600">¥100,000<span className="text-xl font-normal">/月</span></p>
               <ul className="list-none mb-4">
-                <li className="flex items-center mb-2"><FaCheck className="text-green-500 mr-2" /> 求人掲載 無制限</li>
+
                 <li className="flex items-center mb-2"><FaCheck className="text-green-500 mr-2" /> VIP応募者管理</li>
                 <li className="flex items-center mb-2"><FaCheck className="text-green-500 mr-2" /> 24時間サポート</li>
                 <li className="flex items-center mb-2"><FaCheck className="text-green-500 mr-2" /> 採用戦略立案支援</li>

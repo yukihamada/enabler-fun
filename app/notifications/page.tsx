@@ -14,7 +14,7 @@ export default function Notifications() {
           <div className="max-w-2xl mx-auto bg-gray-100 shadow-lg rounded-lg p-6">
             <h2 className="text-2xl font-semibold mb-4">最新の通知</h2>
             <ul className="list-disc list-inside mb-8">
-              <li>新しい求人情報が追加されました。</li>
+<li>新しい情報が追加されました。</li>
               <li>面接のスケジュールが更新されました。</li>
               <li>プロフィール情報が更新されました。</li>
             </ul>

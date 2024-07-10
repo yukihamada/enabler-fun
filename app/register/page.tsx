@@ -1,39 +1,33 @@
-"use client";
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Layout from '@/components/Layout';
-import { auth } from '@/lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import Layout from '@/components/Layout'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export default function Register() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
+  const supabase = createClientComponentClient()
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setIsLoading(true);
+    e.preventDefault()
+    setError(null)
+    setIsLoading(true)
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      setSuccess('ユーザー登録が成功しました！');
-      router.push('/dashboard');
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('予期せぬエラーが発生しました');
-      }
+      const { error } = await supabase.auth.signUp({ email, password })
+      if (error) throw error
+      router.push('/dashboard') // 登録後のリダイレクト先
+    } catch (error) {
+      setError('登録に失敗しました。もう一度お試しください。')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <Layout>
@@ -41,6 +35,7 @@ export default function Register() {
         <section className="py-12 text-center">
           <h1 className="text-5xl font-bold mb-4">会員登録</h1>
           <p className="text-xl mb-8">イネブラをスタートしましょう。</p>
+          {error && <p className="text-red-500 mb-4">{error}</p>}
           <form className="max-w-md mx-auto" onSubmit={handleRegister}>
             <div className="mb-4">
               <label className="block text-left mb-2" htmlFor="email">メールアドレス</label>
@@ -48,7 +43,6 @@ export default function Register() {
                 className="w-full px-4 py-2 border rounded"
                 type="email"
                 id="email"
-                name="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -61,7 +55,6 @@ export default function Register() {
                 className="w-full px-4 py-2 border rounded"
                 type="password"
                 id="password"
-                name="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -76,13 +69,11 @@ export default function Register() {
               {isLoading ? '登録中...' : '登録する'}
             </button>
           </form>
-          {error && <p style={{ color: 'red' }}>{error}</p>}
-          {success && <p style={{ color: 'green' }}>{success}</p>}
           <p className="mt-4">
             既にアカウントをお持ちですか？ <Link href="/login" className="text-blue-600 hover:underline">ログイン</Link>
           </p>
         </section>
       </main>
     </Layout>
-  );
+  )
 }

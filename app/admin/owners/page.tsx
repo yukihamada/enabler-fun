@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../layout';
-import { db } from '../../../lib/firebase'
-import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { supabase } from '../../../lib/supabaseClient';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Loader from '../components/Loader';
@@ -11,49 +10,52 @@ import '../admin.css';
 import { Button, TextField, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Paper, Typography } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Business as BusinessIcon } from '@mui/icons-material';
 
-interface Employer {
+interface Owner {
   id: string;
   name: string;
   email: string;
 }
 
-const Employers = () => {
-  const [employers, setEmployers] = useState<Employer[]>([]);
-  const [newEmployer, setNewEmployer] = useState({ name: '', email: '' });
+const Owners = () => {
+  const [owners, setOwners] = useState<Owner[]>([]);
+  const [newOwner, setNewOwner] = useState({ name: '', email: '' });
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchEmployers();
+    fetchOwners();
   }, []);
 
-  const fetchEmployers = async () => {
+  const fetchOwners = async () => {
     try {
-      const employersCollection = collection(db, 'employers');
-      const snapshot = await getDocs(employersCollection);
-      const employersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employer));
-      setEmployers(employersList);
+      const { data, error } = await supabase
+        .from('owners')
+        .select('*');
+      if (error) throw error;
+      setOwners(data as Owner[]);
     } catch (error) {
-      console.error("雇用主の取得中にエラーが発生しました:", error);
-      alert("雇用主の取得に失敗しました。ページを再読み込みしてください。");
+      console.error("オーナーの取得中にエラーが発生しました:", error);
+      alert("オーナーの取得に失敗しました。ページを再読み込みしてください。");
     } finally {
       setLoading(false);
     }
   };
 
-  const addEmployer = async (e: React.FormEvent<HTMLFormElement>) => {
+  const addOwner = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (newEmployer.name && newEmployer.email) {
+    if (newOwner.name && newOwner.email) {
       setIsSubmitting(true);
       try {
-        const employersCollection = collection(db, 'employers');
-        await addDoc(employersCollection, newEmployer);
-        setNewEmployer({ name: '', email: '' });
-        await fetchEmployers();
-        alert('雇用主が正常に追加されました。');
+        const { error } = await supabase
+          .from('owners')
+          .insert([newOwner]);
+        if (error) throw error;
+        setNewOwner({ name: '', email: '' });
+        await fetchOwners();
+        alert('オーナーが正常に追加されました。');
       } catch (error) {
-        console.error("雇用主の追加中にエラーが発生しました:", error);
-        alert("雇用主の追加に失敗しました。もう一度お試しください。");
+        console.error("オーナーの追加中にエラーが発生しました:", error);
+        alert("オーナーの追加に失敗しました。もう一度お試しください。");
       } finally {
         setIsSubmitting(false);
       }
@@ -62,17 +64,20 @@ const Employers = () => {
     }
   };
 
-  const deleteEmployer = async (id: string) => {
-    if (window.confirm('本当にこの雇用主を削除しますか？')) {
+  const deleteOwner = async (id: string) => {
+    if (window.confirm('本当にこのオーナーを削除しますか？')) {
       setIsSubmitting(true);
       try {
-        const employerDoc = doc(db, 'employers', id);
-        await deleteDoc(employerDoc);
-        await fetchEmployers();
-        alert('雇用主が正常に削除されました。');
+        const { error } = await supabase
+          .from('owners')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+        await fetchOwners();
+        alert('オーナーが正常に削除されました。');
       } catch (error) {
-        console.error("雇用主の削除中にエラーが発生しました:", error);
-        alert("雇用主の削除に失敗しました。もう一度お試しください。");
+        console.error("オーナーの削除中にエラーが発生しました:", error);
+        alert("オーナーの削除に失敗しました。もう一度お試しください。");
       } finally {
         setIsSubmitting(false);
       }
@@ -81,7 +86,7 @@ const Employers = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    setNewEmployer({ ...newEmployer, [id]: value });
+    setNewOwner({ ...newOwner, [id]: value });
   };
 
   return (
@@ -90,21 +95,21 @@ const Employers = () => {
       <AdminLayout>
         <Typography variant="h4" component="h1" gutterBottom>
           <BusinessIcon sx={{ mr: 1 }} />
-          雇用主管理
+          オーナー管理
         </Typography>
         <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
           <Typography variant="h5" component="h2" gutterBottom>
-            新規雇用主登録
+            新規オーナー登録
           </Typography>
-          <form onSubmit={addEmployer} className="space-y-4">
+          <form onSubmit={addOwner} className="space-y-4">
             <TextField
               fullWidth
               id="name"
               label="名前"
               variant="outlined"
-              value={newEmployer.name}
+              value={newOwner.name}
               onChange={handleInputChange}
-              placeholder="雇用主の名前を入力"
+              placeholder="オーナーの名前を入力"
               required
               disabled={isSubmitting}
               sx={{ mb: 2 }}
@@ -115,9 +120,9 @@ const Employers = () => {
               label="メールアドレス"
               variant="outlined"
               type="email"
-              value={newEmployer.email}
+              value={newOwner.email}
               onChange={handleInputChange}
-              placeholder="雇用主のメールアドレスを入力"
+              placeholder="オーナーのメールアドレスを入力"
               required
               disabled={isSubmitting}
               sx={{ mb: 2 }}
@@ -128,30 +133,30 @@ const Employers = () => {
               startIcon={<AddIcon />}
               disabled={isSubmitting}
             >
-              {isSubmitting ? '追加中...' : '雇用主を追加'}
+              {isSubmitting ? '追加中...' : 'オーナーを追加'}
             </Button>
           </form>
         </Paper>
         
         <Paper elevation={3} sx={{ p: 3 }}>
           <Typography variant="h5" component="h2" gutterBottom>
-            雇用主一覧
+            オーナー一覧
           </Typography>
           {loading ? (
             <Loader />
-          ) : employers.length > 0 ? (
+          ) : owners.length > 0 ? (
             <List>
-              {employers.map(employer => (
-                <ListItem key={employer.id} divider>
+              {owners.map(owner => (
+                <ListItem key={owner.id} divider>
                   <ListItemText
-                    primary={employer.name}
-                    secondary={employer.email}
+                    primary={owner.name}
+                    secondary={owner.email}
                   />
                   <ListItemSecondaryAction>
                     <IconButton
                       edge="end"
                       aria-label="delete"
-                      onClick={() => deleteEmployer(employer.id)}
+                      onClick={() => deleteOwner(owner.id)}
                       disabled={isSubmitting}
                     >
                       <DeleteIcon />
@@ -161,7 +166,7 @@ const Employers = () => {
               ))}
             </List>
           ) : (
-            <Typography>雇用主が登録されていません。</Typography>
+            <Typography>オーナーが登録されていません。</Typography>
           )}
         </Paper>
       </AdminLayout>
@@ -170,4 +175,4 @@ const Employers = () => {
   );
 };
 
-export default Employers;
+export default Owners;

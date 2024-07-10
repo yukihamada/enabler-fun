@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Layout from '@/components/Layout'
-import { db } from '../../../lib/firebase'
+import { supabase } from '../../../lib/supabaseClient';
 import { doc, getDoc, updateDoc } from 'firebase/firestore'
 import { ArrowLeftIcon, MapPinIcon, BuildingOfficeIcon, CurrencyYenIcon, ClockIcon, CalendarIcon, UserIcon, AcademicCapIcon } from '@heroicons/react/24/outline'
 
@@ -52,14 +52,20 @@ export default function JobDetail() {
   useEffect(() => {
     const fetchJob = async () => {
       if (typeof id !== 'string') return
-      const jobDoc = doc(db, 'jobs', id)
-      const jobSnapshot = await getDoc(jobDoc)
-      if (jobSnapshot.exists()) {
-        const jobData = { id: jobSnapshot.id, ...jobSnapshot.data() } as JobListing
-        setJob(jobData)
-        const fetchedImages = await fetchImages(jobData.shop_name)
-        setImages(fetchedImages)
-      }
+const { data: jobData, error } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('情報の取得中にエラーが発生しました:', error);
+      return;
+    }
+
+    setJob(jobData);
+    const fetchedImages = await fetchImages(jobData.shop_name);
+    setImages(fetchedImages);
     }
 
     fetchJob()
@@ -82,9 +88,16 @@ export default function JobDetail() {
 
   const handleSave = async () => {
     if (!editedJob) return
-    const jobDoc = doc(db, 'jobs', editedJob.id)
-    const { id, ...updateData } = editedJob
-    await updateDoc(jobDoc, updateData)
+const { data, error } = await supabase
+      .from('jobs')
+      .update(editedJob)
+      .eq('id', editedJob.id)
+      .single();
+
+    if (error) {
+      console.error('情報の更新中にエラーが発生しました:', error);
+      return;
+    }
     setJob(editedJob)
     setIsEditing(false)
   }
@@ -109,13 +122,13 @@ export default function JobDetail() {
           className="mb-8 flex items-center text-blue-600 hover:text-blue-800"
         >
           <ArrowLeftIcon className="h-5 w-5 mr-2" />
-          求人一覧に戻る
+情報一覧に戻る
         </button>
 
         <div className="bg-white shadow-lg rounded-lg overflow-hidden max-w-4xl mx-auto">
           {job.status !== 'open' && (
             <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
-              この求人は現在下書きです
+この情報は現在下書きです
             </div>
           )}
 

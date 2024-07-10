@@ -1,27 +1,33 @@
-
 'use client';
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { ReactNode } from 'react';
 import { FaHome, FaBuilding, FaSignInAlt, FaUserPlus, FaUser, FaCog, FaSignOutAlt, FaInfoCircle, FaEnvelope } from 'react-icons/fa';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { User } from 'firebase/auth';
+import { createClientComponentClient, Session } from '@supabase/auth-helpers-nextjs';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+    };
+
+    getSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
     });
-    return () => unsubscribe();
-  }, []);
+
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
   };
 
   return (
@@ -45,7 +51,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               <Link href="/contact" className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">
                 <FaEnvelope className="mr-1" /> お問い合わせ
               </Link>
-              {user ? (
+              {session ? (
                 <>
                   <Link href="/profile" className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">
                     <FaUser className="mr-1" /> プロフィール
@@ -88,7 +94,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               <Link href="/contact" className="block py-2 text-gray-600 hover:text-blue-600 flex items-center">
                 <FaEnvelope className="mr-2" /> お問い合わせ
               </Link>
-              {user ? (
+              {session ? (
                 <>
                   <Link href="/profile" className="block py-2 text-gray-600 hover:text-blue-600 flex items-center">
                     <FaUser className="mr-2" /> プロフィール
@@ -135,9 +141,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             </div>
             <div className="w-full md:w-1/4 mb-6 md:mb-0">
               <h3 className="text-xl font-semibold mb-4">お問い合わせ</h3>
-              <p>〒123-4567<br />東京都渋谷区○○1-2-3</p>
-              <p>TEL: 03-1234-5678</p>
-              <p>Email: info@enabler.co.jp</p>
+              <p>〒102-0074<br />東京都千代田区九段南１丁目６−５</p>
+              <p>Email: info@enabler.fun</p>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-gray-700 text-center">

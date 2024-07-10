@@ -1,56 +1,53 @@
 # イネブラ（Enabler）
 
-イネブラ（Enabler）は、Next.js、React、Tailwind CSSを使用して構築されたウェブアプリケーションです。民泊・簡易宿泊事業のデジタル化と空間プロデュースのパイオニアとして、物件管理やデジタル化支援、空間デザイン、運営サポートなどのサービスを提供しています。
+イネブラは、民泊・簡易宿泊事業のデジタル化と空間プロデュースを支援するウェブアプリケーションです。Next.js、React、Tailwind CSSを使用して構築されています。
 
-## 特徴
+## 主な機能
 
 - 物件管理システム
-- デジタル化支援サービス
-- 空間デザインサービス
+- デジタル化支援
+- 空間デザイン
 - 運営サポート
-- 物件検索と詳細表示機能
-- サービス紹介ページ
+- 物件検索・詳細表示
+- サービス紹介
 - お問い合わせフォーム
 
 ## 技術スタック
 
-- [Next.js](https://nextjs.org/) - Reactフレームワーク
-- [React](https://reactjs.org/) - ユーザーインターフェース構築のためのJavaScriptライブラリ
-- [Tailwind CSS](https://tailwindcss.com/) - ユーティリティファーストのCSSフレームワーク
-- [TypeScript](https://www.typescriptlang.org/) - 型付きJavaScriptのスーパーセット
-- [React Icons](https://react-icons.github.io/react-icons/) - アイコンライブラリ
+- Next.js
+- React
+- Tailwind CSS
+- TypeScript
+- React Icons
 
-## はじめ方
+## セットアップ
 
-### ���提条件
-
-- Node.js（バージョン14以降推奨）
-- npm（Node.jsに付属）
-
-### インストール
-
-1. リポジトリをクローンします：
+1. リポジトリのクローン：
    ```
-   git clone https://github.com/yourusername/enabler.git
-   cd enabler
+   git clone https://github.com/yourusername/enabler-fun.git
+   cd enabler-fun
    ```
 
-2. 依存関係をインストールします：
+2. 依存関係のインストール：
    ```
    npm install
    ```
 
-### アプリケーションの実行
+3. 開発サーバーの起動：
+   ```
+   npm run dev
+   ```
 
-開発サーバーを起動します：
+ブラウザで[http://localhost:3000](http://localhost:3000)を開いて確認してください。
 
-```bash
-npm run dev
-```
+## 主要コンポーネント
 
-ブラウザで[http://localhost:3000](http://localhost:3000)を開いて結果を確認します。
-
-`app/page.tsx`を編集することでページの編集を開始できます。ファイルを編集すると、ページは自動的に更新されます。
+- ヒーローセクション
+- 注目の物件
+- サービス紹介
+- イネブラの強み
+- お客様の声
+- お問い合わせ
 
 ## プロジェクト構造
 
@@ -64,7 +61,8 @@ enabler/
 │   ├── contact/
 │   ├── about/
 │   ├── team/
-│   ├── careers/
+
+│   ├── dashboard/
 │   ├── news/
 │   ├── favicon.ico
 │   ├── globals.css
@@ -79,22 +77,3 @@ enabler/
 ├── README.md
 ├── tailwind.config.ts
 └── tsconfig.json
-```
-
-## 主要なコンポーネント
-
-- ヒーローセクション：動的な背景画像スライドショー付き
-- 注目の物件セクション
-- サービス紹介セクション
-- イネブラの強みセクション
-- お客様の声セクション
-- お問い合わせセクション
-- フッター
-
-## カスタマイズ
-
-`app/page.tsx`ファイルを編集して、ホームページの内容やレイアウトを変更できます。各セクションは独立したコンポーネントとして実装されているため、必要に応じて追加、削除、または修正が可能です。
-
-## デプロイ
-
-このプロジェクトは、[Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme)を使用して簡単にデプロイできます。詳細は[Next.js deployment documentation](https://nextjs.org/docs/deployment)を参照してください。

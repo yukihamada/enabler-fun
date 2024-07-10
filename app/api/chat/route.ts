@@ -1,5 +1,4 @@
-import * as firebase from '../../../lib/firebase';
-import { getAuth } from 'firebase-admin/auth';
+import { supabase } from '../../../lib/supabaseClient';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -12,15 +11,13 @@ export async function POST(req: Request) {
       throw new Error('DIFY_API_ENDPOINT or DIFY_API_KEY is not set');
     }
 
-    // Firebaseトークンを検証し、ユーザーIDを取得
-    let userId;
-    try {
-      const decodedToken = await getAuth(firebase.firebaseApp).verifyIdToken(idToken);
-      userId = decodedToken.uid;
-    } catch (error) {
-      console.error('Firebase token verification failed:', error);
-      return NextResponse.json({ error: 'Invalid Firebase token' }, { status: 401 });
+// Supabaseトークンを検証し、ユーザーIDを取得
+    const { data: { user }, error } = await supabase.auth.api.getUser(idToken);
+    if (error) {
+      console.error('Supabase token verification failed:', error);
+      return NextResponse.json({ error: 'Invalid Supabase token' }, { status: 401 });
     }
+    const userId = user.id;
 
     console.log('Request URL:', `${process.env.DIFY_API_ENDPOINT}/chat-messages`);
     console.log('Request headers:', {

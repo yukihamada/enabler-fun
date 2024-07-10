@@ -1,7 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { db } from '../../../../lib/firebase';
-import { collection, query, where, getDocs, orderBy, limit, startAfter } from 'firebase/firestore';
+import { supabase } from '../../../../lib/supabaseClient';
 
 export const runtime = 'edge'
 
@@ -16,43 +15,39 @@ export async function GET(request: Request) {
     const pageSize = parseInt(searchParams.get('page_size') || '10', 10);
     const pageToken = searchParams.get('page_token');
 
-    const jobsCollection = collection(db, 'jobs');
-    let q = query(jobsCollection);
+let query = supabase
+      .from('jobs')
+      .select('*')
+      .order(sortBy, { ascending: sortOrder === 'asc' })
+      .limit(pageSize);
 
     if (industry) {
-      q = query(q, where('industry', '==', industry));
+      query = query.eq('industry', industry);
     }
     if (location) {
-      q = query(q, where('location', '==', location));
+      query = query.eq('location', location);
     }
     if (salaryMin) {
-      q = query(q, where('salary', '>=', parseInt(salaryMin, 10)));
+      query = query.gte('salary', parseInt(salaryMin, 10));
     }
-
-    q = query(q, orderBy(sortBy, sortOrder as 'asc' | 'desc'));
-
     if (pageToken) {
-      q = query(q, startAfter(pageToken));
+      query = query.gt('id', pageToken);
     }
 
-    q = query(q, limit(pageSize));
+    const { data: jobs, error } = await query;
 
-    const querySnapshot = await getDocs(q);
+    if (error) {
+      throw error;
+    }
 
-    const jobs = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-
-    const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
-    const nextPageToken = lastVisible ? lastVisible.id : null;
+    const nextPageToken = jobs.length === pageSize ? jobs[jobs.length - 1].id : null;
 
     return NextResponse.json({
       jobs,
       nextPageToken
     });
   } catch (error) {
-    console.error('求人情報の検索中にエラーが発生しました:', error);
-    return NextResponse.json({ error: '求人情報の検索中にエラーが発生しました。' }, { status: 500 });
+console.error('情報の検索中にエラーが発生しました:', error);
+return NextResponse.json({ error: '情報の検索中にエラーが発生しました。' }, { status: 500 });
   }
 }

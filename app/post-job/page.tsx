@@ -32,7 +32,7 @@ export default function PostJobPage() {
         body: JSON.stringify(formData),
       });
       if (response.ok) {
-        alert('求人情報が正常に投稿されました');
+
         localStorage.removeItem('jobPostFormData');
         setFormData({});
       } else {
@@ -119,7 +119,7 @@ export default function PostJobPage() {
       <div className="container mx-auto px-4 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
         <main>
           <section className="py-12">
-            <h1 className="text-4xl font-bold mb-8 text-center text-indigo-800">求人情報を投稿する</h1>
+
             <div className="max-w-2xl mx-auto bg-white shadow-xl rounded-lg p-8">
               <form onSubmit={handleSubmit}>
                 <div className="mb-6">
@@ -351,9 +351,9 @@ const formFields = [
   },
   { 
     id: 'related_jobs', 
-    label: '関連する他のお店の求人情報', 
+
     type: 'textarea', 
-    placeholder: '関連する他のお店の求人情報',
+
     example: '例: 系列店「レストランABC」でもホールスタッフを募集中です。'
   },
   { 
@@ -365,9 +365,9 @@ const formFields = [
   },
   { 
     id: 'recently_viewed_jobs', 
-    label: '最近見た求人情報', 
+
     type: 'textarea', 
-    placeholder: '最近見た求人情報',
+
     example: '例: この項目は自動的に生成されます。'
   },
   { 

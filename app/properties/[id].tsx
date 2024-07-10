@@ -1,7 +1,6 @@
 import { GetServerSideProps } from 'next';
-import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 import Layout from '@/components/Layout';
+import { supabase } from '../../lib/supabaseClient';
 
 interface Property {
   name: string;
@@ -46,10 +45,14 @@ export default function PropertyPage({ property }: PropertyPageProps) {
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { id } = context.params!;
-  const docRef = doc(db, 'properties', id as string);
-  const docSnap = await getDoc(docRef);
 
-  if (!docSnap.exists()) {
+  const { data, error } = await supabase
+    .from('properties')
+    .select('name, location')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) {
     return {
       props: {
         property: null,
@@ -59,8 +62,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
   return {
     props: {
-      property: docSnap.data() as Property,
+      property: data as Property,
     },
   };
 };
-

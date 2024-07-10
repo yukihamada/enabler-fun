@@ -1,12 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-
-
-import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
+import { supabase } from '../../lib/supabaseClient';
 
 interface Property {
   id: string;
@@ -19,12 +16,15 @@ export default function PropertiesPage() {
 
   useEffect(() => {
     const fetchProperties = async () => {
-      const querySnapshot = await getDocs(collection(db, 'properties'));
-      const propertiesList: Property[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Property));
-      setProperties(propertiesList);
+      const { data, error } = await supabase
+        .from('properties')
+        .select('id, name, location');
+
+      if (error) {
+        console.error('物件の取得に失敗しました:', error);
+      } else {
+        setProperties(data || []);
+      }
     };
 
     fetchProperties();

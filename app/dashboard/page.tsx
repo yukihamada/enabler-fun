@@ -2,17 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+useEffect(() => {
+    const session = supabase.auth.session();
+    setUser(session?.user ?? null);
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
     });
-    return () => unsubscribe();
+
+    return () => {
+      authListener?.unsubscribe();
+    };
   }, []);
 
   return (
@@ -25,16 +30,14 @@ export default function Dashboard() {
             <div className="bg-gray-100 shadow-lg rounded-lg p-6">
               <h2 className="text-2xl font-semibold mb-4">最近のアクティビティ</h2>
               <ul className="list-disc list-inside mb-8">
-                <li>求人「焼肉古今」に応募しました。</li>
-                <li>求人「中目黒 Bistro Bolero」に応募しました。</li>
+
                 <li>プロフィール情報を更新しました。</li>
               </ul>
             </div>
             <div className="bg-gray-100 shadow-lg rounded-lg p-6">
               <h2 className="text-2xl font-semibold mb-4">通知</h2>
               <ul className="list-disc list-inside mb-8">
-                <li>新しい求人情報が追加されました。</li>
-                <li>面接のスケジュールが更新されました。</li>
+
               </ul>
             </div>
           </div>

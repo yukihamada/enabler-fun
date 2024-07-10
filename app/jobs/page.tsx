@@ -25,12 +25,12 @@ export default function Jobs() {
       try {
         const response = await fetch('/api/jobs?limit=100');
         if (!response.ok) {
-          throw new Error('求人情報の取得に失敗しました');
+throw new Error('情報の取得に失敗しました');
         }
         const jobsList = await response.json();
         setJobListings(jobsList);
       } catch (error) {
-        console.error('求人情報の取得中にエラーが発生しました:', error);
+console.error('情報の取得中にエラーが発生しました:', error);
       }
     };
 
@@ -45,13 +45,13 @@ export default function Jobs() {
   return (
     <Layout>
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6 text-center">求人一覧</h1>
+<h1 className="text-3xl font-bold mb-6 text-center">情報一覧</h1>
         
         <div className="mb-6">
           <div className="relative">
             <input
               type="text"
-              placeholder="求人を検索..."
+placeholder="情報を検索..."
               className="w-full p-2 pl-10 border border-gray-300 rounded"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
