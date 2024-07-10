@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../layout';
-import { supabase } from '../../../lib/supabaseClient';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Loader from '../components/Loader';
@@ -12,21 +13,27 @@ const Members = () => {
   const [members, setMembers] = useState<Array<{ id: string; [key: string]: any }>>([]);
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-    const fetchMembers = async () => {
-      const session = supabase.auth.session();
-      if (session?.user) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*');
+  useEffect(() => {
+    const auth = getAuth();
+    const db = getFirestore();
 
-        if (error) {
-          console.error("メンバーの取得中にエラーが発生しました:", error);
-        } else {
-          setMembers(data);
-          setLoading(false);
+    const fetchMembers = async () => {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          try {
+            const querySnapshot = await getDocs(collection(db, 'users'));
+            const membersData = querySnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+            setMembers(membersData);
+          } catch (error) {
+            console.error("メンバーの取得中にエラーが発生しました:", error);
+          } finally {
+            setLoading(false);
+          }
         }
-      }
+      });
     };
 
     fetchMembers();

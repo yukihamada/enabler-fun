@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { IoSend } from 'react-icons/io5';
 import styles from './Chat.module.css';
 
@@ -16,36 +18,26 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [user, setUser] = useState<User | null>(null);
 
-useEffect(() => {
-    const session = supabase.auth.session();
-    setUser(session?.user ?? null);
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
     });
 
-    return () => {
-      authListener?.unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     if (user) {
-      const fetchMessages = async () => {
-        const { data, error } = await supabase
-          .from('messages')
-          .select('*')
-          .order('createdAt', { ascending: false })
-          .limit(50);
+      const db = getFirestore();
+      const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc'), limit(50));
 
-        if (error) {
-          console.error("メッセージの取得中にエラーが発生しました:", error);
-        } else {
-          setMessages(data.reverse() as Message[]);
-        }
-      };
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const fetchedMessages = querySnapshot.docs.map(doc => doc.data() as Message);
+        setMessages(fetchedMessages.reverse());
+      });
 
-      fetchMessages();
+      return () => unsubscribe();
     }
   }, [user]);
 
@@ -59,20 +51,18 @@ useEffect(() => {
     };
 
     try {
-      const { error } = await supabase
-        .from('messages')
-        .insert(newMessage);
-
-      if (error) {
-        throw error;
-      }
+      const db = getFirestore();
+      await addDoc(collection(db, 'messages'), {
+        ...newMessage,
+        createdAt: serverTimestamp()
+      });
 
       // ここでボットの応答を生成するCloud Functionを呼び出す
       const botResponse = await fetch('/api/chat', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.id}`
+          'Authorization': `Bearer ${await user.getIdToken()}`
         },
         body: JSON.stringify({ message: input }),
       });
@@ -80,13 +70,11 @@ useEffect(() => {
       const botData = await botResponse.json() as { text: string }[];
       
       for (const botMessage of botData) {
-        await supabase
-          .from('messages')
-          .insert({
-            text: botMessage.text,
-            from: 'bot',
-            createdAt: new Date()
-          });
+        await addDoc(collection(db, 'messages'), {
+          text: botMessage.text,
+          from: 'bot',
+          createdAt: serverTimestamp()
+        });
       }
 
       setInput('');

@@ -2,22 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
-import { supabase } from '@/lib/supabaseClient';
+import { User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
 
-useEffect(() => {
-    const session = supabase.auth.session();
-    setUser(session?.user ?? null);
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
     });
 
-    return () => {
-      authListener?.unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
   return (
