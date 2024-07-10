@@ -1,18 +1,39 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../lib/firebase';
-import { collection, addDoc, FirestoreError } from 'firebase/firestore';
+import { collection, addDoc, FirestoreError, serverTimestamp } from 'firebase/firestore';
+import { auth } from '../../../lib/firebase';
 
 export async function POST(request: Request) {
   try {
+    const user = auth.currentUser;
+    if (!user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
+
     const propertiesCollection = collection(db, 'properties');
     const newProperty = await request.json();
 
-    // 必須フィールドのチェック
-    if (!newProperty.title || !newProperty.price) {
-      return NextResponse.json({ error: '必須フィールド（タイトルまたは価格）が欠落しています' }, { status: 400 });
+    // 必須フィールドのチェックと検証
+    const requiredFields = ['title', 'price', 'description', 'address'];
+    for (const field of requiredFields) {
+      if (!newProperty[field]) {
+        return NextResponse.json({ error: `必須フィールド（${field}）が欠落しています` }, { status: 400 });
+      }
     }
 
-    const docRef = await addDoc(propertiesCollection, newProperty);
+    if (typeof newProperty.price !== 'number' || newProperty.price <= 0) {
+      return NextResponse.json({ error: '価格は正の数値である必要があります' }, { status: 400 });
+    }
+
+    // ユーザーIDとタイムスタンプを追加
+    const propertyData = {
+      ...newProperty,
+      ownerId: user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    const docRef = await addDoc(propertiesCollection, propertyData);
     return NextResponse.json({ 
       message: '物件が正常に追加されました',
       url: `https://enabler.fun/properties/${docRef.id}`
