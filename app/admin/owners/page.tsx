@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../layout';
-import { supabase } from '../../../lib/supabaseClient';
+import { db } from '../../../lib/firebase';
+import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Loader from '../components/Loader';
@@ -27,15 +28,17 @@ const Owners = () => {
   }, []);
 
   const fetchOwners = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('owners')
-        .select('*');
-      if (error) throw error;
-      setOwners(data as Owner[]);
+      const ownersCollection = collection(db, 'owners');
+      const ownersSnapshot = await getDocs(ownersCollection);
+      const ownersList = ownersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Owner));
+      setOwners(ownersList);
     } catch (error) {
       console.error("オーナーの取得中にエラーが発生しました:", error);
-      alert("オーナーの取得に失敗しました。ページを再読み込みしてください。");
     } finally {
       setLoading(false);
     }
@@ -46,21 +49,15 @@ const Owners = () => {
     if (newOwner.name && newOwner.email) {
       setIsSubmitting(true);
       try {
-        const { error } = await supabase
-          .from('owners')
-          .insert([newOwner]);
-        if (error) throw error;
+        const ownersCollection = collection(db, 'owners');
+        await addDoc(ownersCollection, newOwner);
         setNewOwner({ name: '', email: '' });
         await fetchOwners();
-        alert('オーナーが正常に追加されました。');
       } catch (error) {
         console.error("オーナーの追加中にエラーが発生しました:", error);
-        alert("オーナーの追加に失敗しました。もう一度お試しください。");
       } finally {
         setIsSubmitting(false);
       }
-    } else {
-      alert('名前とメールアドレスは必須です');
     }
   };
 
@@ -68,16 +65,11 @@ const Owners = () => {
     if (window.confirm('本当にこのオーナーを削除しますか？')) {
       setIsSubmitting(true);
       try {
-        const { error } = await supabase
-          .from('owners')
-          .delete()
-          .eq('id', id);
-        if (error) throw error;
+        const ownerDoc = doc(db, 'owners', id);
+        await deleteDoc(ownerDoc);
         await fetchOwners();
-        alert('オーナーが正常に削除されました。');
       } catch (error) {
         console.error("オーナーの削除中にエラーが発生しました:", error);
-        alert("オーナーの削除に失敗しました。もう一度お試しください。");
       } finally {
         setIsSubmitting(false);
       }

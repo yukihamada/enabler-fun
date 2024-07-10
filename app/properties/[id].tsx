@@ -1,10 +1,12 @@
 import { GetServerSideProps } from 'next';
 import Layout from '@/components/Layout';
-import { supabase } from '../../lib/supabaseClient';
+import { db } from '../../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface Property {
   name: string;
   location: string;
+  status: string;
 }
 
 interface PropertyPageProps {
@@ -35,6 +37,7 @@ export default function PropertyPage({ property }: PropertyPageProps) {
             <div className="bg-gray-100 p-6 rounded-lg shadow-md">
               <h2 className="text-2xl font-semibold mb-4">{property.name}</h2>
               <p className="text-lg mb-4">所在地: {property.location}</p>
+              <p className="text-lg mb-4">ステータス: {property.status}</p>
             </div>
           </div>
         </section>
@@ -46,13 +49,10 @@ export default function PropertyPage({ property }: PropertyPageProps) {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { id } = context.params!;
 
-  const { data, error } = await supabase
-    .from('properties')
-    .select('name, location')
-    .eq('id', id)
-    .single();
+  const docRef = doc(db, 'properties', id as string);
+  const docSnap = await getDoc(docRef);
 
-  if (error || !data) {
+  if (!docSnap.exists()) {
     return {
       props: {
         property: null,
@@ -60,9 +60,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   }
 
+  const propertyData = docSnap.data() as Property;
+
   return {
     props: {
-      property: data as Property,
+      property: propertyData,
     },
   };
 };

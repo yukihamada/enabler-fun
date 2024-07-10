@@ -9,10 +9,17 @@ import { FaSearch, FaHome, FaChartLine, FaBriefcase, FaUsers, FaLaptop, FaPaintB
 import { useState, useEffect } from 'react';
 
 const images = [
-  '/images/property1.jpg',
-  '/images/property2.jpg',
-  '/images/property3.jpg'
+  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fd46e0678579e6790a7f86931b0fa1478.webp?alt=media&token=dbe025fd-1004-4637-bc06-a3f3c7031d7d',
+  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2F4b77acbc70be968a98df75043c936787.webp?alt=media&token=2caa8a11-8b03-4f6e-93b9-7f18113624a4',
+  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2F8b049917f6f69cf2ebf10f32dfbafe75.JPG?alt=media&token=8b5c109c-f24c-40de-bdd5-3fa12b6510e5',
+  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Faf0b1d14cc9f3301a4ce361af62c2cf3.webp?alt=media&token=f039852a-c1f3-4d0d-a9a8-c6b43825a994',
+  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fc1bdd6a6a4d55cad234259acffc35d69.webp?alt=media&token=2556ec8f-4039-402a-aeec-defded250eb3',
+  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Ffdd5c8d3e1c89b2e4a6558a601f43513.webp?alt=media&token=801885fc-1690-499a-8cf3-6ff52d2d2143',
+  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Ff4b8b1ee4a3282c4aa5e7bd04260ecc5.jpg?alt=media&token=fe806759-95ee-433a-a61b-af79559b299b',
+  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fc67e975008be54e3fdc85c925333c7a2.webp?alt=media&token=2593548c-9dde-4c14-963a-c3eef5485cd8',
+  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fdec69e9042e4667e61dd537ab953ccdf.webp?alt=media&token=d0855b16-6cfc-4a76-9bd0-f7bafc952e7b'
 ];
+
 
 export default function Home() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -50,7 +57,7 @@ export default function Home() {
 
           <section className="py-16 px-4">
             <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">注目の物件</h2>
-            <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300">
                 <Image src="/images/property1.jpg" alt="モダンアパートメント" width={600} height={400} className="w-full h-64 object-cover" />
                 <div className="p-6">
@@ -78,6 +85,28 @@ export default function Home() {
                     <li>観光名所へのアクセス良好</li>
                   </ul>
                   <Link href="/properties/kyoto-townhouse" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300 inline-block">
+                    詳細を見る
+                  </Link>
+                </div>
+              </div>
+
+              <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300">
+                <Image src={images[3]} alt="京都の町屋" width={600} height={400} className="w-full h-64 object-cover" />
+                <div className="p-6">
+                  <h3 className="text-2xl font-semibold mb-4">京都の伝統的な町屋</h3>
+                  <p className="mb-4">京都の歴史と文化を体験できる、趣のある町屋。現代的な設備と伝統的な雰囲気が融合。</p>
+                  <Link href="/properties/kyoto-machiya" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300 inline-block">
+                    詳細を見る
+                  </Link>
+                </div>
+              </div>
+
+              <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300">
+                <Image src={images[4]} alt="弟子屈の家" width={600} height={400} className="w-full h-64 object-cover" />
+                <div className="p-6">
+                  <h3 className="text-2xl font-semibold mb-4">弟子屈の自然に囲まれた家</h3>
+                  <p className="mb-4">北海道の大自然を満喫できる、静かでゆったりとした滞在が可能な一軒家。</p>
+                  <Link href="/properties/teshikaga-house" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300 inline-block">
                     詳細を見る
                   </Link>
                 </div>
@@ -222,7 +251,7 @@ export default function Home() {
             <div className="grid md:grid-cols-4 gap-8">
               <div>
                 <h3 className="text-xl font-semibold mb-4">イネブラ（Enabler）</h3>
-                <p>民泊・簡易宿泊事業のデジタル化と空間プロデュースのパイオニア</p>
+                <p>民泊��簡易宿泊事業のデジタル化と空間プロデュースのパイオニア</p>
               </div>
               <div>
                 <h3 className="text-xl font-semibold mb-4">サービス</h3>

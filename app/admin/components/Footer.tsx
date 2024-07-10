@@ -11,7 +11,7 @@ declare global {
 const Footer: React.FC = () => {
   React.useEffect(() => {
     window.difyChatbotConfig = {
-      token: 'u7yabuLbCIAlYhdV'
+      token: 'rRgbpHRNzLM5fZfn'
     };
   }, []);
 
@@ -22,14 +22,14 @@ const Footer: React.FC = () => {
         dangerouslySetInnerHTML={{
           __html: `
             window.difyChatbotConfig = {
-              token: 'u7yabuLbCIAlYhdV'
+              token: 'rRgbpHRNzLM5fZfn'
             }
           `
         }}
       />
       <script
         src="https://udify.app/embed.min.js"
-        id="u7yabuLbCIAlYhdV"
+        id="rRgbpHRNzLM5fZfn"
         defer
       />
       <style
