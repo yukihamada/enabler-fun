@@ -123,8 +123,23 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     const propertyData = propertySnapshot.data();
-
     const updatedProperty = await request.json();
+
+    // 日付フィールドの処理
+    ['availableFrom', 'availableTo'].forEach(field => {
+      if (updatedProperty[field]) {
+        updatedProperty[field] = new Date(updatedProperty[field]);
+      }
+    });
+
+    // 配列フィールドの処理
+    ['images', 'amenities', 'houseRules', 'nearbyAttractions', 'furnishings', 'specialOffers', 'nearbyFacilities', 'nearbyStations'].forEach(field => {
+      if (typeof updatedProperty[field] === 'string') {
+        updatedProperty[field] = [updatedProperty[field]];
+      } else if (!Array.isArray(updatedProperty[field])) {
+        updatedProperty[field] = [];
+      }
+    });
 
     const updatedPropertyData = {
       ...propertyData,
