@@ -38,7 +38,6 @@ export async function POST(request: Request) {
       }
     });
 
-
     // その他のフィールドのチェックと提案
     if (!newProperty.bedrooms) suggestions.push('寝室の数を指定すると良いでしょう。例：「2ベッドルーム」と記載することで、家族連れの宿泊者にアピー��できます。');
     if (!newProperty.bathrooms) suggestions.push('バスルームの数を指定すると良いでしょう。例：「バスルーム2室」と記載することで、快適さをアピールできます。');
