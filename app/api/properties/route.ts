@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const allFields = [
       'title', 'description', 'address', 'price', 'dailyRate', 'monthlyRate',
       'bedrooms', 'bathrooms', 'maxGuests', 'amenities', 'images', 'houseRules',
-      'checkInTime', 'checkOutTime', 'latitude', 'longitude', 'nearbyAttractions',
+      'latitude', 'longitude', 'nearbyAttractions',
       'furnishings', 'availableFrom', 'availableTo', 'specialOffers', 'nearbyFacilities',
       'smokingAllowed', 'petsAllowed', 'wifiInfo', 'cleaningFee', 'parking',
       'cancellationPolicy', 'surroundings', 'nearbyStations'
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     });
 
     // 日付フィールドの処理
-    ['checkInTime', 'checkOutTime', 'availableFrom', 'availableTo'].forEach(field => {
+    ['availableFrom', 'availableTo'].forEach(field => {
       if (propertyData[field]) {
         propertyData[field] = new Date(propertyData[field]);
       }
