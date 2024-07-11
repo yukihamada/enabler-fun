@@ -39,7 +39,10 @@ export async function POST(request: Request) {
     });
 
     // 価格のチェック
-    if (typeof newProperty.price !== 'number' || newProperty.price <= 0) {
+    if (typeof newProperty.price === 'string') {
+      newProperty.price = parseFloat(newProperty.price);
+    }
+    if (typeof newProperty.price !== 'number' || isNaN(newProperty.price) || newProperty.price <= 0) {
       suggestions.push('有効な価格を設定してください。例：「100000」（10万円）のように数値で入力してください。');
     }
 
@@ -53,30 +56,19 @@ export async function POST(request: Request) {
     if (!newProperty.checkInTime || !newProperty.checkOutTime) suggestions.push('チェックイン・チェックアウト時間を指定すると良いでしょう。例：「チェックイン15:00〜、チェックアウト〜11:00」と明記することで、スムーズな施設運営ができます。');
 
     // フィールドの型変換と日付処理
-    if (typeof newProperty.images === 'string') {
-      newProperty.images = [newProperty.images];
-    } else if (!Array.isArray(newProperty.images)) {
-      newProperty.images = [];
-    }
+    ['images', 'amenities', 'houseRules'].forEach(field => {
+      if (typeof newProperty[field] === 'string') {
+        newProperty[field] = [newProperty[field]];
+      } else if (!Array.isArray(newProperty[field])) {
+        newProperty[field] = [];
+      }
+    });
 
-    if (typeof newProperty.amenities === 'string') {
-      newProperty.amenities = [newProperty.amenities];
-    } else if (!Array.isArray(newProperty.amenities)) {
-      newProperty.amenities = [];
-    }
-
-    if (typeof newProperty.houseRules === 'string') {
-      newProperty.houseRules = [newProperty.houseRules];
-    } else if (!Array.isArray(newProperty.houseRules)) {
-      newProperty.houseRules = [];
-    }
-
-    if (newProperty.checkInTime) {
-      newProperty.checkInTime = new Date(newProperty.checkInTime);
-    }
-    if (newProperty.checkOutTime) {
-      newProperty.checkOutTime = new Date(newProperty.checkOutTime);
-    }
+    ['checkInTime', 'checkOutTime'].forEach(field => {
+      if (newProperty[field]) {
+        newProperty[field] = new Date(newProperty[field]);
+      }
+    });
 
     const propertyData = {
       ...newProperty,
