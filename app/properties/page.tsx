@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react';
 import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
@@ -67,7 +68,7 @@ export default function PropertiesPage() {
                         ¥{property.price?.toLocaleString() ?? '価格未定'} / 泊
                       </span>
                       <span>
-                        {property.bedrooms ?? '-'}寝室 • {property.bathrooms ?? '-'}バス • {property.area ?? '-'}m²
+                        {property.bedrooms ?? '-'}寝室 • {property.bathrooms ?? '-'}バス ��� {property.area ?? '-'}m²
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
