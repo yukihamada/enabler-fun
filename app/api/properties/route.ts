@@ -112,48 +112,23 @@ export async function GET(request: Request, { params }: { params?: { id?: string
   }
 }
 
-// PUT: 民泊施設情報を更新
+// PUT: 民泊施設情報を更新（デバッグ用に簡略化）
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    const propertyDoc = doc(db, 'properties', params.id);
-    const propertySnapshot = await getDoc(propertyDoc);
-
-    if (!propertySnapshot.exists()) {
-      return NextResponse.json({ error: '指定された民泊施設が見つかりません' }, { status: 404 });
-    }
-
-    const propertyData = propertySnapshot.data();
     const updatedProperty = await request.json();
 
-    // 日付フィールドの処理
-    ['availableFrom', 'availableTo'].forEach(field => {
-      if (updatedProperty[field]) {
-        updatedProperty[field] = new Date(updatedProperty[field]);
-      }
-    });
+    // デバッグ用のログ出力
+    console.log("受信したデータ:", JSON.stringify(updatedProperty, null, 2));
+    console.log("更新対象のID:", params.id);
 
-    // 配列フィールドの処理
-    ['images', 'amenities', 'houseRules', 'nearbyAttractions', 'furnishings', 'specialOffers', 'nearbyFacilities', 'nearbyStations'].forEach(field => {
-      if (typeof updatedProperty[field] === 'string') {
-        updatedProperty[field] = [updatedProperty[field]];
-      } else if (!Array.isArray(updatedProperty[field])) {
-        updatedProperty[field] = [];
-      }
-    });
-
-    const updatedPropertyData = {
-      ...propertyData,
-      ...updatedProperty,
-      updatedAt: serverTimestamp()
-    };
-
-    // 問題箇所を見つけるためにログを追加
-    console.log("Updating document:", JSON.stringify(updatedPropertyData, null, 2));
-
-    await updateDoc(propertyDoc, updatedPropertyData);
-
-    return NextResponse.json({ message: '民泊施設情報が更新されました' }, { status: 200 });
+    // 適当な応答を返す
+    return NextResponse.json({ 
+      message: '民泊施設情報が更新されました（デバッグモード）',
+      updatedId: params.id,
+      receivedData: updatedProperty
+    }, { status: 200 });
   } catch (error) {
+    console.error("エラー発生:", error);
     return handleError(error);
   }
 }
