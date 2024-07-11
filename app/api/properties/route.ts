@@ -47,12 +47,12 @@ export async function POST(request: Request) {
     }
 
     // その他のフィールドのチェックと提案
-    if (!newProperty.bedrooms) suggestions.push('寝室の数を指定すると良いでしょう。例：「2ベッドルーム」と記載することで、家族連れの宿泊者にアピールできます。');
+    if (!newProperty.bedrooms) suggestions.push('寝室の数を指定すると良いでしょう。例：「2ベッドルーム」と記載することで、家族連れの宿泊者にアピー��できます。');
     if (!newProperty.bathrooms) suggestions.push('バスルームの数を指定すると良いでしょう。例：「バスルーム2室」と記載することで、快適さをアピールできます。');
     if (!newProperty.maxGuests) suggestions.push('最大宿泊人数を設定すると良いでしょう。例：「最大6名様まで宿泊可能」と記載することで、グループでの利用を促進できます。');
     if (!newProperty.amenities || (Array.isArray(newProperty.amenities) && newProperty.amenities.length === 0)) suggestions.push('設備・アメニティを追加すると良いでしょう。例：「無料Wi-Fi完備、キッチン付き」などの特徴を記載すると、宿泊者の関心を引きやすくなります。');
     if (!newProperty.images || (Array.isArray(newProperty.images) && newProperty.images.length === 0)) suggestions.push('施設の写真を追加すると良いでしょう。例：「リビングルームの明るい雰囲気が伝わる写真」を掲載すると、宿泊者の興味を引くことができます。');
-    if (!newProperty.houseRules) suggestions.push('ハウスルールを設定すると良いでしょう。例：「禁煙、午後10時以降の騒音禁止」などのルールを明記することで、トラブルを未然に防ぐことができます。');
+    if (!newProperty.houseRules) suggestions.push('ハウスルールを設定すると良いでしょう。例：「禁煙、午後10時以降の騒音禁止」などのルールを明記することで、トラブルを未然に防ぐことが��きます。');
     if (!newProperty.checkInTime || !newProperty.checkOutTime) suggestions.push('チェックイン・チェックアウト時間を指定すると良いでしょう。例：「チェックイン15:00〜、チェックアウト〜11:00」と明記することで、スムーズな施設運営ができます。');
 
     // フィールドの型変換と日付処理

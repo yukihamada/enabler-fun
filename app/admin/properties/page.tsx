@@ -9,7 +9,9 @@ import '../admin.css';
 import { Button, TextField, Typography, Paper, Grid, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -19,12 +21,14 @@ interface Property {
   title: string;
   description: string;
   address: string;
+  isPublished: boolean;
 }
 
 interface NewProperty {
   title: string;
   description: string;
   address: string;
+  isPublished: boolean;
 }
 
 const requiredFields = [
@@ -54,7 +58,7 @@ const requiredFields = [
 const Properties = () => {
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
-  const [newProperty, setNewProperty] = useState<NewProperty>({ title: '', description: '', address: '' });
+  const [newProperty, setNewProperty] = useState<NewProperty>({ title: '', description: '', address: '', isPublished: true });
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -99,7 +103,7 @@ const Properties = () => {
         const propertiesCollection = collection(db, 'properties');
         const docRef = await addDoc(propertiesCollection, newProperty);
         console.log("Document written with ID: ", docRef.id);
-        setNewProperty({ title: '', description: '', address: '' });
+        setNewProperty({ title: '', description: '', address: '', isPublished: true });
         fetchData();
         alert('物件情報が正常に追加されました。');
       } catch (error: unknown) {
@@ -122,6 +126,20 @@ const Properties = () => {
     } catch (error) {
       console.error('物件の削除中にエラーが発生しました:', error);
       alert('物件の削除中にエラーが発生しました。もう一度試してください。');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const togglePublishStatus = async (id: string, currentStatus: boolean) => {
+    setIsSubmitting(true);
+    try {
+      await updateDoc(doc(db, 'properties', id), { isPublished: !currentStatus });
+      fetchData();
+      alert('掲載状態が更新されました。');
+    } catch (error) {
+      console.error('掲載状態の更新中にエラーが発生しました:', error);
+      alert('掲載状態の更新中にエラーが発生しました。もう一度試してください。');
     } finally {
       setIsSubmitting(false);
     }
@@ -194,9 +212,29 @@ const Properties = () => {
                           <Typography component="span" color="primary">{property.title}</Typography>
                         </Link>
                       } 
-                      secondary={property.address} 
+                      secondary={
+                        <>
+                          {property.address}
+                          <br />
+                          <Typography component="span" color={property.isPublished ? "success" : "error"}>
+                            {property.isPublished ? "掲載中" : "非掲載"}
+                          </Typography>
+                        </>
+                      } 
                     />
                     <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        aria-label="toggle-publish"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePublishStatus(property.id, property.isPublished);
+                        }}
+                        disabled={isSubmitting}
+                        style={{ marginRight: '10px' }}
+                      >
+                        {property.isPublished ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      </IconButton>
                       <IconButton
                         edge="end"
                         aria-label="delete"
