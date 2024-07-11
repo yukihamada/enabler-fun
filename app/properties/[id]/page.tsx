@@ -10,6 +10,7 @@ import Layout from '../../../components/Layout';
 import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshirt, FaSnowman, FaSubway, FaShoppingCart, FaTree, FaSchool, FaCocktail, FaSpa, FaCalendarAlt, FaMoneyBillWave, FaInfoCircle, FaMapMarkerAlt, FaClipboardList, FaUserFriends, FaSmoking, FaPaw, FaParking, FaFileContract, FaMapMarkedAlt, FaTools } from 'react-icons/fa';
 import { MdEdit as EditIcon, MdSave as SaveIcon, MdCancel as CancelIcon } from 'react-icons/md';
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
+import { Timestamp } from 'firebase/firestore';
 
 interface Property {
   id: string;
@@ -35,8 +36,8 @@ interface Property {
   cancellationPolicy?: string;
   nearbyAttractions?: string[];
   furnishings?: string[];
-  availableFrom?: { seconds: number; nanoseconds: number };
-  availableTo?: { seconds: number; nanoseconds: number };
+  availableFrom?: Timestamp;
+  availableTo?: Timestamp;
   specialOffers?: string[];
   nearbyFacilities?: { name: string; distance: number }[];
   latitude?: number;
@@ -54,9 +55,9 @@ const amenityIcons = {
   '冷蔵庫': FaSnowman,
 } as const;
 
-const formatDate = (date: { seconds: number; nanoseconds: number } | undefined) => {
+const formatDate = (date: Timestamp | undefined) => {
   if (!date) return '未設定';
-  return new Date(date.seconds * 1000).toLocaleDateString('ja-JP');
+  return date.toDate().toLocaleDateString('ja-JP');
 };
 
 export default function PropertyDetail() {
@@ -78,10 +79,16 @@ export default function PropertyDetail() {
 
         if (docSnap.exists()) {
           const propertyData = { id: docSnap.id, ...docSnap.data() } as Property;
+          console.log('Fetched property data:', JSON.stringify(propertyData, (key, value) => {
+            if (value && typeof value === 'object' && value.constructor.name === 'Timestamp') {
+              return `Timestamp(${value.seconds}, ${value.nanoseconds})`;
+            }
+            return value;
+          }, 2));
           setProperty(propertyData);
           setEditedProperty(propertyData);
         } else {
-          console.log('物が見つかりませ');
+          console.log('物件が見つかりません');
         }
       } catch (error) {
         console.error('物件データの取得中にエラーが発生しました:', error);
@@ -125,7 +132,7 @@ export default function PropertyDetail() {
       if (name === 'availableFrom' || name === 'availableTo') {
         // 日付入力の場合、Firestore のタイムスタンプ形式に変換
         const date = new Date(value);
-        return { ...prev, [name]: { seconds: Math.floor(date.getTime() / 1000), nanoseconds: 0 } };
+        return { ...prev, [name]: Timestamp.fromDate(date) };
       }
       return { ...prev, [name]: value };
     });
@@ -165,6 +172,15 @@ export default function PropertyDetail() {
       </Layout>
     );
   }
+
+  const renderValue = (value: any) => {
+    if (value === null || value === undefined) return 'データなし';
+    if (value instanceof Timestamp) {
+      return formatDate(value);
+    }
+    if (typeof value === 'object') return JSON.stringify(value);
+    return value.toString();
+  };
 
   return (
     <Layout>
@@ -239,7 +255,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="bathrooms"
-                      label="バス���ム数"
+                      label="バスルーム数"
                       type="number"
                       value={editedProperty?.bathrooms || ''}
                       onChange={handleInputChange}
@@ -266,7 +282,7 @@ export default function PropertyDetail() {
                       </div>
                       <div className="flex items-center">
                         <FaBath className="text-indigo-600 mr-2" />
-                        <span>{property.bathrooms} ��スルー</span>
+                        <span>{property.bathrooms} バスルーム</span>
                       </div>
                       <div className="flex items-center">
                         <FaRuler className="text-indigo-600 mr-2" />
@@ -363,7 +379,7 @@ export default function PropertyDetail() {
                 <TextField
                   fullWidth
                   name="nearbyStations"
-                  label="寄り駅 (ンマ区切り)"
+                  label="寄り駅 (カンマ区切��)"
                   value={(editedProperty?.nearbyStations ?? []).join(', ')}
                   onChange={(e) => handleArrayInputChange('nearbyStations', e.target.value.split(',').map(item => item.trim()))}
                   className="mb-4"
@@ -649,7 +665,7 @@ export default function PropertyDetail() {
                   type="date"
                   name="availableFrom"
                   label="開始日"
-                  value={editedProperty?.availableFrom ? new Date(editedProperty.availableFrom.seconds * 1000).toISOString().split('T')[0] : ''}
+                  value={editedProperty?.availableFrom ? new Date(editedProperty.availableFrom.toDate()).toISOString().split('T')[0] : ''}
                   onChange={handleInputChange}
                   className="mr-4"
                 />
@@ -657,15 +673,13 @@ export default function PropertyDetail() {
                   type="date"
                   name="availableTo"
                   label="終了日"
-                  value={editedProperty?.availableTo ? new Date(editedProperty.availableTo.seconds * 1000).toISOString().split('T')[0] : ''}
+                  value={editedProperty?.availableTo ? new Date(editedProperty.availableTo.toDate()).toISOString().split('T')[0] : ''}
                   onChange={handleInputChange}
                 />
               </>
             ) : (
               <Typography>
-                {property.availableFrom && property.availableTo
-                  ? `${new Date(property.availableFrom.seconds * 1000).toLocaleDateString()} から ${new Date(property.availableTo.seconds * 1000).toLocaleDateString()} まで`
-                  : '予約可能期間は設定されていません'}
+                {renderValue(property.availableFrom)} から {renderValue(property.availableTo)} まで
               </Typography>
             )}
           </section>
@@ -714,7 +728,7 @@ export default function PropertyDetail() {
               <ul>
                 {property.nearbyFacilities?.map((facility, index) => (
                   <li key={index}>{facility.name} - {facility.distance}km</li>
-                )) || <li>近隣の施設情報はあり���せん</li>}
+                )) || <li>近隣の施設情報はありません</li>}
               </ul>
             )}
           </section>
@@ -759,6 +773,16 @@ export default function PropertyDetail() {
                 <Typography>地図情報が利用できません</Typography>
               )
             )}
+          </section>
+
+          {/* デバッグ用：すべてのプロパティを表示 */}
+          <section className="mb-8">
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800">デバッグ情報</Typography>
+            {Object.entries(property).map(([key, value]) => (
+              <div key={key}>
+                <strong>{key}:</strong> {renderValue(value)}
+              </div>
+            ))}
           </section>
 
         </Container>
