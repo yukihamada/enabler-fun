@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Layout from '../components/Layout'; // Layout component imported
 import { FaSearch, FaHome, FaChartLine, FaBriefcase, FaUsers, FaLaptop, FaPaintBrush, FaHandsHelping } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 
 const images = [
   'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fd46e0678579e6790a7f86931b0fa1478.webp?alt=media&token=dbe025fd-1004-4637-bc06-a3f3c7031d7d',
@@ -23,6 +24,8 @@ const images = [
 
 export default function Home() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState('all');
+  const [showNewsletter, setShowNewsletter] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -32,17 +35,34 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  const filterProperties = (category: string) => {
+    setActiveTab(category);
+    // ここで物件のフィルタリングロジックを実装
+  };
+
   return (
     <Layout>
       <div className="min-h-screen flex flex-col">
+        <Head>
+          <title>イネブラ（Enabler） - 民泊・簡易宿泊事業のデジタル化と空間プロデュース</title>
+          <meta name="description" content="イネブラは、民泊・簡易宿泊事業のデジタル化と空間プロデュースを行う企業です。物件管理、デジタル化支援、空間デザイン、運営サポートなど、幅広いサービスを提供しています。" />
+          <meta name="keywords" content="民泊, 簡易宿泊, デジタル化, 空間プロデュース, 物件管理, イネブラ, Enabler" />
+        </Head>
         <main className="bg-white text-gray-900 flex-grow">
-          <section className="relative h-screen flex items-center justify-center bg-cover bg-center transition-all duration-1000 ease-in-out" style={{backgroundImage: `url(${images[currentImageIndex]})`}}>
+          <section className="relative h-screen flex items-center justify-center bg-cover bg-center transition-all duration-1000 ease-in-out">
+            <Image 
+              src={images[currentImageIndex]} 
+              alt="ヒーロー画像" 
+              layout="fill" 
+              objectFit="cover" 
+              priority
+            />
             <div className="absolute inset-0 bg-black opacity-50"></div>
             <div className="relative z-10 text-center text-white px-4">
               <h1 className="text-5xl md:text-6xl font-bold mb-4">イネブラ（Enabler）</h1>
               <p className="text-xl md:text-2xl mb-8">民泊・簡易宿泊事業のデジタル化と空間プロデュースのパイオニア</p>
               <div className="space-x-4">
-                <Link href="/properties" className="btn-primary inline-block">
+                <Link href="/properties" className="btn-primary inline-block" aria-label="物件を探す">
                   物件を探す
                 </Link>
                 <Link href="/services" className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full text-lg hover:bg-white hover:text-blue-600 transition duration-300 inline-block mt-4 md:mt-0">
@@ -57,7 +77,7 @@ export default function Home() {
 
           <section className="py-16 px-4">
             <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">注目の物件</h2>
-            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300">
                 <Image src="/images/property1.jpg" alt="モダンアパートメント" width={600} height={400} className="w-full h-64 object-cover" />
                 <div className="p-6">
@@ -150,14 +170,14 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <div className="bg-gray-50 p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-semibold mb-4">豊富な経験</h3>
-                <p className="text-gray-600">多数の物件管理実績と、業界をリードする専門知識を持つ経験豊富なチーム</p>
+                <p className="text-gray-600">多数の物件管理実績と、業界をリードする専門知識を持つ経豊富なチーム</p>
               </div>
               <div className="bg-gray-50 p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-semibold mb-4">革新的なテクノロジー</h3>
                 <p className="text-gray-600">最新のデジタルツールとAIを活用し、効率的な運営と顧客満足度の向上を実現</p>
               </div>
               <div className="bg-gray-50 p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-semibold mb-4">カスタマイズされたソリューション</h3>
+                <h3 className="text-xl font-semibold mb-4">カスタマズされたソリューション</h3>
                 <p className="text-gray-600">各物件のユニークなニーズに合わせた、柔軟かつ効果的なサービス提供</p>
               </div>
             </div>
@@ -251,7 +271,7 @@ export default function Home() {
             <div className="grid md:grid-cols-4 gap-8">
               <div>
                 <h3 className="text-xl font-semibold mb-4">イネブラ（Enabler）</h3>
-                <p>民泊��簡易宿泊事業のデジタル化と空間プロデュースのパイオニア</p>
+                <p>民泊・簡易宿泊事業のデジタル化と空間プロデュースのパイオニア</p>
               </div>
               <div>
                 <h3 className="text-xl font-semibold mb-4">サービス</h3>
@@ -284,6 +304,20 @@ export default function Home() {
           </div>
         </footer>
       </div>
+      {showNewsletter && (
+        <div className="fixed bottom-0 left-0 right-0 bg-blue-600 text-white p-4">
+          <div className="max-w-4xl mx-auto flex justify-between items-center">
+            <p>最新情報を受け取りませんか？</p>
+            <input 
+              type="email" 
+              placeholder="メールアドレスを入力" 
+              className="px-4 py-2 text-gray-900"
+            />
+            <button className="bg-white text-blue-600 px-4 py-2">登録</button>
+            <button onClick={() => setShowNewsletter(false)}>✕</button>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

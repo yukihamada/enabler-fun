@@ -14,15 +14,27 @@ export async function POST(request: Request) {
     const newProperty = await request.json();
 
     // 必須フィールドのチェックと検証
-    const requiredFields = ['title', 'price', 'description', 'address'];
+    const requiredFields = ['title', 'description', 'address'];
     for (const field of requiredFields) {
       if (!newProperty[field]) {
         return NextResponse.json({ error: `必須フィールド（${field}）が欠落しています` }, { status: 400 });
       }
     }
 
-    if (typeof newProperty.price !== 'number' || newProperty.price <= 0) {
-      return NextResponse.json({ error: '価格は正の数値である必要があります' }, { status: 400 });
+    // 価格フィールドの検証
+    const priceFields = ['dailyRate', 'monthlyRate', 'salePrice'];
+    let hasPriceField = false;
+    for (const field of priceFields) {
+      if (newProperty[field] !== undefined) {
+        if (typeof newProperty[field] !== 'number' || newProperty[field] <= 0) {
+          return NextResponse.json({ error: `${field}は正の数値である必要があります` }, { status: 400 });
+        }
+        hasPriceField = true;
+      }
+    }
+
+    if (!hasPriceField) {
+      return NextResponse.json({ error: '少なくとも1つの価格フィールド（dailyRate、monthlyRate、salePrice）が必要です' }, { status: 400 });
     }
 
     // ユーザーIDとタイムスタンプを追加

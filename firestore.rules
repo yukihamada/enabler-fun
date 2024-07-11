@@ -1,82 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ユーザープロファイル
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId;
-      allow delete: if false;
-    }
-
-    // 物件
-    match /properties/{propertyId} {
-      allow read: if true;
-      allow create: if request.auth != null && validateProperty();
-      allow update: if request.auth != null && resource.data.ownerId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
-
-      // 物件データの検証
-      function validateProperty() {
-        let requiredFields = ['title', 'price', 'description', 'address', 'ownerId', 'createdAt', 'updatedAt'];
-        let incomingData = request.resource.data;
-        return incomingData.keys().hasAll(requiredFields) &&
-               incomingData.title is string && incomingData.title.size() > 0 &&
-               incomingData.price is number && incomingData.price > 0 &&
-               incomingData.description is string &&
-               incomingData.address is string &&
-               incomingData.ownerId == request.auth.uid &&
-               incomingData.createdAt is timestamp &&
-               incomingData.updatedAt is timestamp;
-      }
-    }
-
-    // 予約
-    match /bookings/{bookingId} {
-      allow read: if request.auth != null && (resource.data.guestId == request.auth.uid || isPropertyOwner());
-      allow create: if request.auth != null && validateBooking();
-      allow update: if request.auth != null && (resource.data.guestId == request.auth.uid || isPropertyOwner());
-      allow delete: if request.auth != null && resource.data.guestId == request.auth.uid;
-
-      // 予約データの検証
-      function validateBooking() {
-        let requiredFields = ['propertyId', 'guestId', 'startDate', 'endDate', 'totalPrice', 'status', 'createdAt'];
-        let incomingData = request.resource.data;
-        return incomingData.keys().hasAll(requiredFields) &&
-               incomingData.propertyId is string &&
-               incomingData.guestId == request.auth.uid &&
-               incomingData.startDate is timestamp &&
-               incomingData.endDate is timestamp &&
-               incomingData.totalPrice is number && incomingData.totalPrice > 0 &&
-               incomingData.status in ['pending', 'confirmed', 'cancelled'] &&
-               incomingData.createdAt is timestamp;
-      }
-
-      // 物件所有者かどうかの確認
-      function isPropertyOwner() {
-        let propertyId = resource.data.propertyId;
-        let property = get(/databases/$(database)/documents/properties/$(propertyId));
-        return property.data.ownerId == request.auth.uid;
-      }
-    }
-
-    // レビュー
-    match /reviews/{reviewId} {
-      allow read: if true;
-      allow create: if request.auth != null && validateReview();
-      allow update, delete: if false;
-
-      // レビューデータの検証
-      function validateReview() {
-        let requiredFields = ['propertyId', 'guestId', 'rating', 'comment', 'createdAt'];
-        let incomingData = request.resource.data;
-        return incomingData.keys().hasAll(requiredFields) &&
-               incomingData.propertyId is string &&
-               incomingData.guestId == request.auth.uid &&
-               incomingData.rating is number && incomingData.rating >= 1 && incomingData.rating <= 5 &&
-               incomingData.comment is string &&
-               incomingData.createdAt is timestamp;
-      }
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
