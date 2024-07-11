@@ -1,8 +1,25 @@
 import { NextResponse } from 'next/server';
-import { db } from '../../../lib/firebase';
-import { collection, addDoc, FirestoreError, serverTimestamp } from 'firebase/firestore';
-import { auth } from '../../../lib/firebase';
+import { db, auth } from '../../../lib/firebase';
+import { collection, addDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, FirestoreError, serverTimestamp, query, where } from 'firebase/firestore';
 
+function handleError(error: unknown) {
+  if (error instanceof FirestoreError) {
+    switch (error.code) {
+      case 'permission-denied':
+        return NextResponse.json({ error: 'データベースへの権限がありません' }, { status: 403 });
+      case 'unavailable':
+        return NextResponse.json({ error: 'データベースが一時的に利用できません' }, { status: 503 });
+      default:
+        return NextResponse.json({ error: `Firestoreエラー: ${error.message}` }, { status: 500 });
+    }
+  } else if (error instanceof SyntaxError) {
+    return NextResponse.json({ error: '無効なJSONデータが送信されました' }, { status: 400 });
+  } else {
+    return NextResponse.json({ error: `予期せぬエラーが発生しました: ${error instanceof Error ? error.message : String(error)}` }, { status: 500 });
+  }
+}
+
+// POST: 新しい民泊施設を登録
 export async function POST(request: Request) {
   try {
     const user = auth.currentUser;
@@ -22,7 +39,7 @@ export async function POST(request: Request) {
 
     let suggestions = [];
     if (missingFields.length > 0) {
-      suggestions.push(`必須項目を入力してください。例：「${missingFields[0]}」は宿泊者が物件を選ぶ際の重要な情報です。`);
+      suggestions.push(`必須項目を入力しください。例：「${missingFields[0]}」は宿泊者が物件を選ぶ際の重要な情報です。`);
     }
     if (typeof newProperty.price !== 'number' || newProperty.price <= 0) {
       suggestions.push('有効な価格を設定してください。例：「100000」（10万円）のように数値で入力してください。');
@@ -37,7 +54,7 @@ export async function POST(request: Request) {
       suggestions.push('最大宿泊人数を設定すると良いでしょう。例：「最大6名様まで宿泊可能」と記載することで、グループでの利用を促進できます。');
     }
     if (!newProperty.amenities || newProperty.amenities.length === 0) {
-      suggestions.push('設備・アメニティを追加すると良いでしょう。例：「無料Wi-Fi完備、キッチン付き」などの特徴を記載すると、宿泊者の関心を引きやすくなります。');
+      suggestions.push('設備・アメニティを追加すると良いでしょう。例：「無料Wi-Fi完備、キッチン付き」などの特徴を記載すると、宿泊者の関心を引やすくなります。');
     }
     if (!newProperty.images || newProperty.images.length === 0) {
       suggestions.push('施設の写真を追加すると良いでしょう。例：「リビングルームの明るい雰囲気が伝わる写真」を掲載すると、宿泊者の興味を引くことができます。');
@@ -80,5 +97,110 @@ export async function POST(request: Request) {
     } else {
       return NextResponse.json({ error: `予期せぬエラーが発生しました: ${error instanceof Error ? error.message : String(error)}` }, { status: 500 });
     }
+  }
+}
+
+// GET: 民泊施設を取得（全てまたは特定の1件）
+export async function GET(request: Request, { params }: { params?: { id?: string } } = {}) {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
+
+    if (params?.id) {
+      // 特定の民泊施設を取得
+      const propertyDoc = doc(db, 'properties', params.id);
+      const propertySnapshot = await getDoc(propertyDoc);
+
+      if (!propertySnapshot.exists()) {
+        return NextResponse.json({ error: '指定された民泊施設が見つかりません' }, { status: 404 });
+      }
+
+      const propertyData = propertySnapshot.data();
+      if (propertyData.ownerId !== user.uid) {
+        return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 });
+      }
+
+      return NextResponse.json({ id: propertySnapshot.id, ...propertyData });
+    } else {
+      // 全ての民泊施設を取得
+      const propertiesCollection = collection(db, 'properties');
+      const q = query(propertiesCollection, where("ownerId", "==", user.uid));
+      const querySnapshot = await getDocs(q);
+
+      const properties = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      return NextResponse.json(properties);
+    }
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+// PUT: 民泊施設情報を更新
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
+
+    const propertyDoc = doc(db, 'properties', params.id);
+    const propertySnapshot = await getDoc(propertyDoc);
+
+    if (!propertySnapshot.exists()) {
+      return NextResponse.json({ error: '指定された民泊施設が見つかりません' }, { status: 404 });
+    }
+
+    const propertyData = propertySnapshot.data();
+    if (propertyData.ownerId !== user.uid) {
+      return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 });
+    }
+
+    const updatedProperty = await request.json();
+
+    const updatedPropertyData = {
+      ...propertyData,
+      ...updatedProperty,
+      updatedAt: serverTimestamp()
+    };
+
+    await updateDoc(propertyDoc, updatedPropertyData);
+
+    return NextResponse.json({ message: '民泊施設情報が更新されました' }, { status: 200 });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+// DELETE: 民泊施設を削除
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+    }
+
+    const propertyDoc = doc(db, 'properties', params.id);
+    const propertySnapshot = await getDoc(propertyDoc);
+
+    if (!propertySnapshot.exists()) {
+      return NextResponse.json({ error: '指定された民泊施設が見つかりません' }, { status: 404 });
+    }
+
+    const propertyData = propertySnapshot.data();
+    if (propertyData.ownerId !== user.uid) {
+      return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 });
+    }
+
+    await deleteDoc(propertyDoc);
+
+    return NextResponse.json({ message: '民泊施設が削除されました' }, { status: 200 });
+  } catch (error) {
+    return handleError(error);
   }
 }
