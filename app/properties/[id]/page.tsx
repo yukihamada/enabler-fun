@@ -7,8 +7,9 @@ import { db } from '../../../lib/firebase';
 import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize } from '@mui/material';
 import Image from 'next/image';
 import Layout from '../../../components/Layout';
-import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshirt, FaSnowman, FaSubway, FaShoppingCart, FaTree, FaSchool, FaCocktail, FaSpa } from 'react-icons/fa';
+import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshirt, FaSnowman, FaSubway, FaShoppingCart, FaTree, FaSchool, FaCocktail, FaSpa, FaCalendarAlt, FaMoneyBillWave, FaInfoCircle, FaMapMarkerAlt, FaClipboardList, FaUserFriends, FaSmoking, FaPaw, FaParking, FaFileContract, FaMapMarkedAlt, FaTools } from 'react-icons/fa';
 import { MdEdit as EditIcon, MdSave as SaveIcon, MdCancel as CancelIcon } from 'react-icons/md';
+import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 
 interface Property {
   id: string;
@@ -34,10 +35,12 @@ interface Property {
   cancellationPolicy?: string;
   nearbyAttractions?: string[];
   furnishings?: string[];
-  availableFrom?: Date;
-  availableTo?: Date;
+  availableFrom?: { seconds: number; nanoseconds: number };
+  availableTo?: { seconds: number; nanoseconds: number };
   specialOffers?: string[];
   nearbyFacilities?: { name: string; distance: number }[];
+  latitude?: number;
+  longitude?: number;
 }
 
 type AmenityKey = keyof typeof amenityIcons;
@@ -50,6 +53,11 @@ const amenityIcons = {
   '洗濯機': FaTshirt,
   '冷蔵庫': FaSnowman,
 } as const;
+
+const formatDate = (date: { seconds: number; nanoseconds: number } | undefined) => {
+  if (!date) return '未設定';
+  return new Date(date.seconds * 1000).toLocaleDateString('ja-JP');
+};
 
 export default function PropertyDetail() {
   const params = useParams();
@@ -73,7 +81,7 @@ export default function PropertyDetail() {
           setProperty(propertyData);
           setEditedProperty(propertyData);
         } else {
-          console.log('物が見つ��りません');
+          console.log('物が見つかりませ');
         }
       } catch (error) {
         console.error('物件データの取得中にエラーが発生しました:', error);
@@ -114,6 +122,11 @@ export default function PropertyDetail() {
     const { name, value } = e.target;
     setEditedProperty(prev => {
       if (!prev) return null;
+      if (name === 'availableFrom' || name === 'availableTo') {
+        // 日付入力の場合、Firestore のタイムスタンプ形式に変換
+        const date = new Date(value);
+        return { ...prev, [name]: { seconds: Math.floor(date.getTime() / 1000), nanoseconds: 0 } };
+      }
       return { ...prev, [name]: value };
     });
   };
@@ -123,6 +136,11 @@ export default function PropertyDetail() {
       if (!prev) return null;
       return { ...prev, [name]: value };
     });
+  };
+
+  const mapContainerStyle = {
+    width: '100%',
+    height: '400px'
   };
 
   if (loading) {
@@ -221,7 +239,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="bathrooms"
-                      label="バスルーム数"
+                      label="バス���ム数"
                       type="number"
                       value={editedProperty?.bathrooms || ''}
                       onChange={handleInputChange}
@@ -248,7 +266,7 @@ export default function PropertyDetail() {
                       </div>
                       <div className="flex items-center">
                         <FaBath className="text-indigo-600 mr-2" />
-                        <span>{property.bathrooms} バスルー</span>
+                        <span>{property.bathrooms} ��スルー</span>
                       </div>
                       <div className="flex items-center">
                         <FaRuler className="text-indigo-600 mr-2" />
@@ -291,7 +309,9 @@ export default function PropertyDetail() {
           </Paper>
           
           <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800">高級アメニティ</Typography>
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaSnowflake className="mr-2 text-indigo-600" /> 高級アメニティ
+            </Typography>
             {isEditing ? (
               <TextField
                 fullWidth
@@ -313,7 +333,9 @@ export default function PropertyDetail() {
           </section>
 
           <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800">周辺環境</Typography>
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaMapMarkerAlt className="mr-2 text-indigo-600" /> 周辺環境
+            </Typography>
             {isEditing ? (
               <TextField
                 fullWidth
@@ -333,13 +355,15 @@ export default function PropertyDetail() {
           </section>
 
           <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800">周辺施設</Typography>
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaSubway className="mr-2 text-indigo-600" /> 周辺施設
+            </Typography>
             {isEditing ? (
               <>
                 <TextField
                   fullWidth
                   name="nearbyStations"
-                  label="寄り駅 (カンマ区切り)"
+                  label="寄り駅 (ンマ区切り)"
                   value={(editedProperty?.nearbyStations ?? []).join(', ')}
                   onChange={(e) => handleArrayInputChange('nearbyStations', e.target.value.split(',').map(item => item.trim()))}
                   className="mb-4"
@@ -366,7 +390,9 @@ export default function PropertyDetail() {
           </section>
 
           <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800">宿泊詳細</Typography>
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaInfoCircle className="mr-2 text-indigo-600" /> 宿泊詳細
+            </Typography>
             <Grid container spacing={3}>
               {isEditing ? (
                 <>
@@ -383,7 +409,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="checkOutTime"
-                      label="チェックア��ト時間"
+                      label="チェックアウト時間"
                       value={editedProperty?.checkOutTime || ''}
                       onChange={handleInputChange}
                     />
@@ -436,45 +462,63 @@ export default function PropertyDetail() {
                 </>
               ) : (
                 <>
-                  {property.checkInTime && (
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Typography variant="subtitle1" className="font-semibold">チェックイン：</Typography>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaCalendarAlt className="mr-2 text-indigo-600" /> チェックイン：
+                      </Typography>
                       <Typography>{property.checkInTime}</Typography>
-                    </Grid>
-                  )}
-                  {property.checkOutTime && (
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Typography variant="subtitle1" className="font-semibold">チェックアウト：</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaCalendarAlt className="mr-2 text-indigo-600" /> チェックアウト：
+                      </Typography>
                       <Typography>{property.checkOutTime}</Typography>
-                    </Grid>
-                  )}
-                  {property.maxGuests && (
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Typography variant="subtitle1" className="font-semibold">最大宿泊人数：</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaUserFriends className="mr-2 text-indigo-600" /> 最大宿泊人数：
+                      </Typography>
                       <Typography>{property.maxGuests}名</Typography>
-                    </Grid>
-                  )}
-                  <Grid item xs={12} sm={6} md={4}>
-                    <Typography variant="subtitle1" className="font-semibold">喫煙：</Typography>
-                    <Typography>{property.smokingAllowed ? '可' : '不可'}</Typography>
+                    </Paper>
                   </Grid>
                   <Grid item xs={12} sm={6} md={4}>
-                    <Typography variant="subtitle1" className="font-semibold">ペット</Typography>
-                    <Typography>{property.petsAllowed ? '可' : '不可'}</Typography>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaSmoking className="mr-2 text-indigo-600" /> 喫煙：
+                      </Typography>
+                      <Typography>{property.smokingAllowed ? '可' : '不可'}</Typography>
+                    </Paper>
                   </Grid>
-                  {property.wifiInfo && (
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Typography variant="subtitle1" className="font-semibold">Wi-Fi：</Typography>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaPaw className="mr-2 text-indigo-600" /> ペット：
+                      </Typography>
+                      <Typography>{property.petsAllowed ? '可' : '不可'}</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaWifi className="mr-2 text-indigo-600" /> Wi-Fi：
+                      </Typography>
                       <Typography>{property.wifiInfo}</Typography>
-                    </Grid>
-                  )}
+                    </Paper>
+                  </Grid>
                 </>
               )}
             </Grid>
           </section>
 
           <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800">料金・ポリシー</Typography>
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaMoneyBillWave className="mr-2 text-indigo-600" /> 料金・ポリシー
+            </Typography>
             <Grid container spacing={3}>
               {isEditing ? (
                 <>
@@ -509,31 +553,39 @@ export default function PropertyDetail() {
                 </>
               ) : (
                 <>
-                  {property.cleaningFee && (
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Typography variant="subtitle1" className="font-semibold">清掃料金：</Typography>
-                      <Typography>¥{property.cleaningFee.toLocaleString()}</Typography>
-                    </Grid>
-                  )}
-                  {property.parking && (
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Typography variant="subtitle1" className="font-semibold">駐車場：</Typography>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaMoneyBillWave className="mr-2 text-indigo-600" /> 清掃料金：
+                      </Typography>
+                      <Typography>¥{property.cleaningFee?.toLocaleString()}</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaParking className="mr-2 text-indigo-600" /> 駐車場：
+                      </Typography>
                       <Typography>{property.parking}</Typography>
-                    </Grid>
-                  )}
-                  {property.cancellationPolicy && (
-                    <Grid item xs={12}>
-                      <Typography variant="subtitle1" className="font-semibold">キャンセルポリシー：</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaFileContract className="mr-2 text-indigo-600" /> キャンセルポリシー：
+                      </Typography>
                       <Typography>{property.cancellationPolicy}</Typography>
-                    </Grid>
-                  )}
+                    </Paper>
+                  </Grid>
                 </>
               )}
             </Grid>
           </section>
 
           <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800">周辺情報</Typography>
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaTree className="mr-2 text-indigo-600" /> 周辺情報
+            </Typography>
             <Grid container spacing={3}>
               {isEditing ? (
                 <>
@@ -558,40 +610,46 @@ export default function PropertyDetail() {
                 </>
               ) : (
                 <>
-                  {property.nearbyAttractions && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle1" className="font-semibold">近隣の観光スポット：</Typography>
+                  <Grid item xs={12} sm={6}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaMapMarkedAlt className="mr-2 text-indigo-600" /> 近隣の観光スポット：
+                      </Typography>
                       <ul className="list-disc pl-5">
-                        {property.nearbyAttractions.map((spot, index) => (
+                        {property.nearbyAttractions?.map((spot, index) => (
                           <li key={index}>{spot}</li>
                         ))}
                       </ul>
-                    </Grid>
-                  )}
-                  {property.furnishings && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle1" className="font-semibold">主な設備・家具：</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaTools className="mr-2 text-indigo-600" /> 主な設備・家具：
+                      </Typography>
                       <ul className="list-disc pl-5">
-                        {property.furnishings.map((item, index) => (
+                        {property.furnishings?.map((item, index) => (
                           <li key={index}>{item}</li>
                         ))}
                       </ul>
-                    </Grid>
-                  )}
+                    </Paper>
+                  </Grid>
                 </>
               )}
             </Grid>
           </section>
 
           <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800">予約可能期間</Typography>
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約可能期間
+            </Typography>
             {isEditing ? (
               <>
                 <TextField
                   type="date"
                   name="availableFrom"
                   label="開始日"
-                  value={editedProperty?.availableFrom?.toISOString().split('T')[0] || ''}
+                  value={editedProperty?.availableFrom ? new Date(editedProperty.availableFrom.seconds * 1000).toISOString().split('T')[0] : ''}
                   onChange={handleInputChange}
                   className="mr-4"
                 />
@@ -599,21 +657,23 @@ export default function PropertyDetail() {
                   type="date"
                   name="availableTo"
                   label="終了日"
-                  value={editedProperty?.availableTo?.toISOString().split('T')[0] || ''}
+                  value={editedProperty?.availableTo ? new Date(editedProperty.availableTo.seconds * 1000).toISOString().split('T')[0] : ''}
                   onChange={handleInputChange}
                 />
               </>
             ) : (
               <Typography>
                 {property.availableFrom && property.availableTo
-                  ? `${property.availableFrom.toLocaleDateString()} から ${property.availableTo.toLocaleDateString()} まで`
+                  ? `${new Date(property.availableFrom.seconds * 1000).toLocaleDateString()} から ${new Date(property.availableTo.seconds * 1000).toLocaleDateString()} まで`
                   : '予約可能期間は設定されていません'}
               </Typography>
             )}
           </section>
 
           <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800">特別オファー</Typography>
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaCocktail className="mr-2 text-indigo-600" /> 特別オファー
+            </Typography>
             {isEditing ? (
               <TextField
                 fullWidth
@@ -634,7 +694,9 @@ export default function PropertyDetail() {
           </section>
 
           <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800">近隣の施設</Typography>
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaClipboardList className="mr-2 text-indigo-600" /> 近隣の施設
+            </Typography>
             {isEditing ? (
               <TextField
                 fullWidth
@@ -652,27 +714,86 @@ export default function PropertyDetail() {
               <ul>
                 {property.nearbyFacilities?.map((facility, index) => (
                   <li key={index}>{facility.name} - {facility.distance}km</li>
-                )) || <li>近隣の施設情報はありません</li>}
+                )) || <li>近隣の施設情報はあり���せん</li>}
               </ul>
             )}
           </section>
+
+          <section className="mb-8">
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaMapMarkerAlt className="mr-2 text-indigo-600" /> 地図
+            </Typography>
+            {isEditing ? (
+              <>
+                <TextField
+                  fullWidth
+                  name="latitude"
+                  label="緯度"
+                  type="number"
+                  value={editedProperty?.latitude || ''}
+                  onChange={handleInputChange}
+                  className="mb-4"
+                />
+                <TextField
+                  fullWidth
+                  name="longitude"
+                  label="経度"
+                  type="number"
+                  value={editedProperty?.longitude || ''}
+                  onChange={handleInputChange}
+                  className="mb-4"
+                />
+              </>
+            ) : (
+              property.latitude && property.longitude ? (
+                <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
+                  <GoogleMap
+                    mapContainerStyle={mapContainerStyle}
+                    center={{ lat: property.latitude, lng: property.longitude }}
+                    zoom={15}
+                  >
+                    <Marker position={{ lat: property.latitude, lng: property.longitude }} />
+                  </GoogleMap>
+                </LoadScript>
+              ) : (
+                <Typography>地図情報が利用できません</Typography>
+              )
+            )}
+          </section>
+
         </Container>
         
         {/* 編集ボタンを右下に固定 */}
         <div className="fixed bottom-8 right-8">
           {isEditing ? (
             <>
-              <IconButton onClick={handleSave} color="primary" className="mr-2 bg-white">
-                <SaveIcon />
-              </IconButton>
-              <IconButton onClick={handleCancel} color="secondary" className="bg-white">
-                <CancelIcon />
-              </IconButton>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<SaveIcon />}
+                onClick={handleSave}
+                className="mr-2"
+              >
+                保存
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<CancelIcon />}
+                onClick={handleCancel}
+              >
+                キャンセル
+              </Button>
             </>
           ) : (
-            <IconButton onClick={handleEdit} color="primary" className="bg-white">
-              <EditIcon />
-            </IconButton>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<EditIcon />}
+              onClick={handleEdit}
+            >
+              編集
+            </Button>
           )}
         </div>
       </div>

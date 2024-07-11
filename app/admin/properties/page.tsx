@@ -11,10 +11,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Timestamp } from 'firebase/firestore';
 
 interface Property {
   id: string;
@@ -22,6 +23,7 @@ interface Property {
   description: string;
   address: string;
   isPublished: boolean;
+  createdAt?: Timestamp;
 }
 
 interface NewProperty {
@@ -34,7 +36,7 @@ interface NewProperty {
 const requiredFields = [
   { 
     id: 'title', 
-    label: '物件タイトルを入力してください。', 
+    label: '物件���イトルを入力てください。', 
     type: 'text', 
     placeholder: '物件タイトル', 
     example: '例: 渋谷駅徒歩5分！モダンな1LDKアパートメント'
@@ -62,39 +64,39 @@ const Properties = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const propertiesCollection = collection(db, 'properties');
-      const propertiesSnapshot = await getDocs(propertiesCollection);
-      const propertiesList = propertiesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Property));
-      setProperties(propertiesList);
-    } catch (error) {
-      console.error('データの取得中にエラーが発生しました:', error);
-    } finally {
-      setLoading(false);
+  const formatTimestamp = (timestamp: Timestamp | undefined) => {
+    if (timestamp && timestamp instanceof Timestamp) {
+      return timestamp.toDate().toLocaleString('ja-JP');
     }
-  }, []);
+    return '日時不明';
+  };
 
   useEffect(() => {
-    fetchData();
+    setLoading(true);
+    const propertiesCollection = collection(db, 'properties');
     
-    // Firebaseの接続テスト
-    const testConnection = async () => {
-      try {
-        const testDoc = await addDoc(collection(db, 'test'), { test: true });
-        console.log('Firebase接続テスト成功:', testDoc.id);
-        await deleteDoc(doc(db, 'test', testDoc.id));
-      } catch (error) {
-        console.error('Firebase接続テストラー:', error);
-      }
-    };
-    
-    testConnection();
-  }, [fetchData]);
+    const unsubscribe = onSnapshot(propertiesCollection, (snapshot) => {
+      const propertiesList = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title,
+          description: data.description,
+          address: data.address,
+          isPublished: data.isPublished,
+          createdAt: data.createdAt
+        } as Property;
+      });
+      setProperties(propertiesList);
+      setLoading(false);
+    }, (error) => {
+      console.error('データの取得中にエラーが発生しました:', error);
+      setLoading(false);
+    });
+
+    // クリーンアップ関数
+    return () => unsubscribe();
+  }, []);
 
   const addProperty = async () => {
     if (Object.values(newProperty).every(field => field)) {
@@ -104,8 +106,7 @@ const Properties = () => {
         const docRef = await addDoc(propertiesCollection, newProperty);
         console.log("Document written with ID: ", docRef.id);
         setNewProperty({ title: '', description: '', address: '', isPublished: true });
-        fetchData();
-        alert('物件情報が正常に追加されました。');
+        alert('物件情報が常に追加されました。');
       } catch (error: unknown) {
         console.error('物件の追加中にエラーが発生しました:', error);
         alert(`物件の追加中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
@@ -121,7 +122,6 @@ const Properties = () => {
     setIsSubmitting(true);
     try {
       await deleteDoc(doc(db, 'properties', id));
-      fetchData();
       alert('物件情報が正常に削除されました。');
     } catch (error) {
       console.error('物件の削除中にエラーが発生しました:', error);
@@ -135,7 +135,6 @@ const Properties = () => {
     setIsSubmitting(true);
     try {
       await updateDoc(doc(db, 'properties', id), { isPublished: !currentStatus });
-      fetchData();
       alert('掲載状態が更新されました。');
     } catch (error) {
       console.error('掲載状態の更新中にエラーが発生しました:', error);
@@ -219,6 +218,12 @@ const Properties = () => {
                           <Typography component="span" color={property.isPublished ? "success" : "error"}>
                             {property.isPublished ? "掲載中" : "非掲載"}
                           </Typography>
+                          {property.createdAt && (
+                            <>
+                              <br />
+                              作成日時: {formatTimestamp(property.createdAt)}
+                            </>
+                          )}
                         </>
                       } 
                     />
