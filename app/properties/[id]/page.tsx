@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
-import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel } from '@mui/material';
+import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize } from '@mui/material';
 import Image from 'next/image';
 import Layout from '../../../components/Layout';
 import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshirt, FaSnowman, FaSubway, FaShoppingCart, FaTree, FaSchool, FaCocktail, FaSpa } from 'react-icons/fa';
@@ -73,7 +73,7 @@ export default function PropertyDetail() {
           setProperty(propertyData);
           setEditedProperty(propertyData);
         } else {
-          console.log('物が見つかりません');
+          console.log('物が見つ��りません');
         }
       } catch (error) {
         console.error('物件データの取得中にエラーが発生しました:', error);
@@ -150,38 +150,27 @@ export default function PropertyDetail() {
 
   return (
     <Layout>
-      <div className="bg-gray-100 min-h-screen">
+      <div className="bg-gray-100 min-h-screen relative">
         <Container maxWidth="lg" className="py-16">
-          <Paper elevation={3} className="p-8 mb-8 bg-white shadow-xl relative">
-            <div className="absolute top-4 right-4">
-              {isEditing ? (
-                <>
-                  <IconButton onClick={handleSave} color="primary" className="mr-2">
-                    <SaveIcon />
-                  </IconButton>
-                  <IconButton onClick={handleCancel} color="secondary">
-                    <CancelIcon />
-                  </IconButton>
-                </>
-              ) : (
-                <IconButton onClick={handleEdit} color="primary">
-                  <EditIcon />
-                </IconButton>
-              )}
-            </div>
+          <Paper elevation={3} className="p-8 mb-8 bg-white shadow-xl">
             <Grid container spacing={4}>
               <Grid item xs={12} md={6}>
                 {isEditing ? (
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={4}
-                    name="imageUrls"
-                    label="画像URL（1行に1つ）"
-                    value={editedProperty?.imageUrls?.join('\n') || ''}
-                    onChange={(e) => handleArrayInputChange('imageUrls', e.target.value.split('\n').filter(url => url.trim() !== ''))}
-                    className="mb-4"
-                  />
+                  <div className="mb-4">
+                    <Typography variant="subtitle1" className="mb-2">画像URL（1行に1つ）</Typography>
+                    <textarea
+                      rows={4}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                      value={editedProperty?.imageUrls?.join('\n') || ''}
+                      onChange={(e) => {
+                        const urls = e.target.value.split('\n').filter(url => url.trim() !== '');
+                        handleArrayInputChange('imageUrls', urls);
+                      }}
+                    />
+                    <Typography variant="caption" className="mt-1 text-gray-600">
+                      各URLを新しい行に入力してください。
+                    </Typography>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     {property.imageUrls && property.imageUrls.length > 0 ? (
@@ -259,7 +248,7 @@ export default function PropertyDetail() {
                       </div>
                       <div className="flex items-center">
                         <FaBath className="text-indigo-600 mr-2" />
-                        <span>{property.bathrooms} バスルーム</span>
+                        <span>{property.bathrooms} バスルー</span>
                       </div>
                       <div className="flex items-center">
                         <FaRuler className="text-indigo-600 mr-2" />
@@ -394,7 +383,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="checkOutTime"
-                      label="チェックアウト時間"
+                      label="チェックア��ト時間"
                       value={editedProperty?.checkOutTime || ''}
                       onChange={handleInputChange}
                     />
@@ -470,7 +459,7 @@ export default function PropertyDetail() {
                     <Typography>{property.smokingAllowed ? '可' : '不可'}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} md={4}>
-                    <Typography variant="subtitle1" className="font-semibold">ペット可：</Typography>
+                    <Typography variant="subtitle1" className="font-semibold">ペット</Typography>
                     <Typography>{property.petsAllowed ? '可' : '不可'}</Typography>
                   </Grid>
                   {property.wifiInfo && (
@@ -561,7 +550,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="furnishings"
-                      label="主な設備・家具 (カンマ区切り)"
+                      label="主な設備・具 (カンマ区切り)"
                       value={(editedProperty?.furnishings ?? []).join(', ')}
                       onChange={(e) => handleArrayInputChange('furnishings', e.target.value.split(',').map(item => item.trim()))}
                     />
@@ -631,7 +620,7 @@ export default function PropertyDetail() {
                 multiline
                 rows={4}
                 name="specialOffers"
-                label="特別オファー（1行に1つ）"
+                label="特別ファー（1行に1つ）"
                 value={editedProperty?.specialOffers?.join('\n') || ''}
                 onChange={(e) => handleArrayInputChange('specialOffers', e.target.value.split('\n').filter(offer => offer.trim() !== ''))}
               />
@@ -668,6 +657,24 @@ export default function PropertyDetail() {
             )}
           </section>
         </Container>
+        
+        {/* 編集ボタンを右下に固定 */}
+        <div className="fixed bottom-8 right-8">
+          {isEditing ? (
+            <>
+              <IconButton onClick={handleSave} color="primary" className="mr-2 bg-white">
+                <SaveIcon />
+              </IconButton>
+              <IconButton onClick={handleCancel} color="secondary" className="bg-white">
+                <CancelIcon />
+              </IconButton>
+            </>
+          ) : (
+            <IconButton onClick={handleEdit} color="primary" className="bg-white">
+              <EditIcon />
+            </IconButton>
+          )}
+        </div>
       </div>
     </Layout>
   );
