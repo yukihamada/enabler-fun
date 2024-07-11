@@ -23,7 +23,33 @@ export default function Layout({ children }: { children: ReactNode }) {
       setSession(session);
     });
 
-    return () => subscription.unsubscribe();
+    // Difyチャットボットの設定を追加
+    window.difyChatbotConfig = {
+      token: 'rRgbpHRNzLM5fZfn'
+    };
+
+    // スクリプトを動的に追加
+    const script = document.createElement('script');
+    script.src = 'https://udify.app/embed.min.js';
+    script.id = 'rRgbpHRNzLM5fZfn';
+    script.defer = true;
+    document.body.appendChild(script);
+
+    // スタイルを動的に追加
+    const style = document.createElement('style');
+    style.textContent = `
+      #dify-chatbot-bubble-button {
+        background-color: #1C64F2 !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    // クリーンアップ関数
+    return () => {
+      document.body.removeChild(script);
+      document.head.removeChild(style);
+      subscription.unsubscribe();
+    };
   }, [supabase.auth]);
 
   const handleSignOut = async () => {

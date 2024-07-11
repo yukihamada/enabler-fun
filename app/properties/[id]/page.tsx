@@ -55,9 +55,24 @@ const amenityIcons = {
   '冷蔵庫': FaSnowman,
 } as const;
 
-const formatDate = (date: Timestamp | undefined) => {
+const formatDate = (date: Timestamp | Date | undefined) => {
   if (!date) return '未設定';
-  return date.toDate().toLocaleDateString('ja-JP');
+  if (date instanceof Timestamp) {
+    return date.toDate().toLocaleDateString('ja-JP');
+  }
+  if (date instanceof Date) {
+    return date.toLocaleDateString('ja-JP');
+  }
+  return '無効な日付';
+};
+
+const renderValue = (value: any): string => {
+  if (value === null || value === undefined) return 'データなし';
+  if (value instanceof Timestamp) return formatDate(value);
+  if (value instanceof Date) return formatDate(value);
+  if (Array.isArray(value)) return value.map(renderValue).join(', ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
 };
 
 export default function PropertyDetail() {
@@ -79,16 +94,10 @@ export default function PropertyDetail() {
 
         if (docSnap.exists()) {
           const propertyData = { id: docSnap.id, ...docSnap.data() } as Property;
-          console.log('Fetched property data:', JSON.stringify(propertyData, (key, value) => {
-            if (value && typeof value === 'object' && value.constructor.name === 'Timestamp') {
-              return `Timestamp(${value.seconds}, ${value.nanoseconds})`;
-            }
-            return value;
-          }, 2));
           setProperty(propertyData);
           setEditedProperty(propertyData);
         } else {
-          console.log('物件が見つかりません');
+          console.log('物が見つかりませ');
         }
       } catch (error) {
         console.error('物件データの取得中にエラーが発生しました:', error);
@@ -173,19 +182,44 @@ export default function PropertyDetail() {
     );
   }
 
-  const renderValue = (value: any) => {
-    if (value === null || value === undefined) return 'データなし';
-    if (value instanceof Timestamp) {
-      return formatDate(value);
-    }
-    if (typeof value === 'object') return JSON.stringify(value);
-    return value.toString();
-  };
-
   return (
     <Layout>
       <div className="bg-gray-100 min-h-screen relative">
         <Container maxWidth="lg" className="py-16">
+          {/* 編集ボタンを右上に配置 */}
+          <div className="absolute top-4 right-4">
+            {isEditing ? (
+              <>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<SaveIcon />}
+                  onClick={handleSave}
+                  className="mr-2"
+                >
+                  保存
+                </Button>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={<CancelIcon />}
+                  onClick={handleCancel}
+                >
+                  キャンセル
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<EditIcon />}
+                onClick={handleEdit}
+              >
+                編集
+              </Button>
+            )}
+          </div>
+
           <Paper elevation={3} className="p-8 mb-8 bg-white shadow-xl">
             <Grid container spacing={4}>
               <Grid item xs={12} md={6}>
@@ -219,7 +253,7 @@ export default function PropertyDetail() {
                         />
                       ))
                     ) : (
-                      <Typography>画像がありません</Typography>
+                      <Typography>画像がません</Typography>
                     )}
                   </div>
                 )}
@@ -255,7 +289,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="bathrooms"
-                      label="バスルーム数"
+                      label="バスム数"
                       type="number"
                       value={editedProperty?.bathrooms || ''}
                       onChange={handleInputChange}
@@ -282,7 +316,7 @@ export default function PropertyDetail() {
                       </div>
                       <div className="flex items-center">
                         <FaBath className="text-indigo-600 mr-2" />
-                        <span>{property.bathrooms} バスルーム</span>
+                        <span>{property.bathrooms} スルー</span>
                       </div>
                       <div className="flex items-center">
                         <FaRuler className="text-indigo-600 mr-2" />
@@ -332,7 +366,7 @@ export default function PropertyDetail() {
               <TextField
                 fullWidth
                 name="amenities"
-                label="アメニティ (カンマ区切り)"
+                label="アメニティ (カン��区切り)"
                 value={(editedProperty?.amenities ?? []).join(', ')}
                 onChange={(e) => handleArrayInputChange('amenities', e.target.value.split(',').map(item => item.trim()))}
                 className="mb-4"
@@ -379,12 +413,12 @@ export default function PropertyDetail() {
                 <TextField
                   fullWidth
                   name="nearbyStations"
-                  label="寄り駅 (カンマ区切��)"
+                  label="寄り駅 (ンマ区切り)"
                   value={(editedProperty?.nearbyStations ?? []).join(', ')}
                   onChange={(e) => handleArrayInputChange('nearbyStations', e.target.value.split(',').map(item => item.trim()))}
                   className="mb-4"
                 />
-                {/* 他の周辺施設（学校、ショッピング、公園）も同様に編集フィールドを追加 */}
+                {/* 他の周辺設（学校、ショッピング、公園）も同様に編集フィールドを追加 */}
               </>
             ) : (
               <Grid container spacing={4}>
@@ -412,24 +446,7 @@ export default function PropertyDetail() {
             <Grid container spacing={3}>
               {isEditing ? (
                 <>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      fullWidth
-                      name="checkInTime"
-                      label="チェックイン時間"
-                      value={editedProperty?.checkInTime || ''}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      fullWidth
-                      name="checkOutTime"
-                      label="チェックアウト時間"
-                      value={editedProperty?.checkOutTime || ''}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
+ 
                   <Grid item xs={12} sm={6} md={4}>
                     <TextField
                       fullWidth
@@ -481,22 +498,6 @@ export default function PropertyDetail() {
                   <Grid item xs={12} sm={6} md={4}>
                     <Paper className="p-4 bg-white shadow-md">
                       <Typography variant="subtitle1" className="font-semibold flex items-center">
-                        <FaCalendarAlt className="mr-2 text-indigo-600" /> チェックイン：
-                      </Typography>
-                      <Typography>{property.checkInTime}</Typography>
-                    </Paper>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <Paper className="p-4 bg-white shadow-md">
-                      <Typography variant="subtitle1" className="font-semibold flex items-center">
-                        <FaCalendarAlt className="mr-2 text-indigo-600" /> チェックアウト：
-                      </Typography>
-                      <Typography>{property.checkOutTime}</Typography>
-                    </Paper>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <Paper className="p-4 bg-white shadow-md">
-                      <Typography variant="subtitle1" className="font-semibold flex items-center">
                         <FaUserFriends className="mr-2 text-indigo-600" /> 最大宿泊人数：
                       </Typography>
                       <Typography>{property.maxGuests}名</Typography>
@@ -526,6 +527,7 @@ export default function PropertyDetail() {
                       <Typography>{property.wifiInfo}</Typography>
                     </Paper>
                   </Grid>
+
                 </>
               )}
             </Grid>
@@ -561,7 +563,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="cancellationPolicy"
-                      label="キャンセルポリシー"
+                      label="キャンセルリシー"
                       value={editedProperty?.cancellationPolicy || ''}
                       onChange={handleInputChange}
                     />
@@ -600,7 +602,7 @@ export default function PropertyDetail() {
 
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaTree className="mr-2 text-indigo-600" /> 周辺情報
+              <FaTree className="mr-2 text-indigo-600" /> 周辺情
             </Typography>
             <Grid container spacing={3}>
               {isEditing ? (
@@ -665,7 +667,9 @@ export default function PropertyDetail() {
                   type="date"
                   name="availableFrom"
                   label="開始日"
-                  value={editedProperty?.availableFrom ? new Date(editedProperty.availableFrom.toDate()).toISOString().split('T')[0] : ''}
+                  value={editedProperty?.availableFrom instanceof Timestamp 
+                    ? editedProperty.availableFrom.toDate().toISOString().split('T')[0]
+                    : ''}
                   onChange={handleInputChange}
                   className="mr-4"
                 />
@@ -673,13 +677,17 @@ export default function PropertyDetail() {
                   type="date"
                   name="availableTo"
                   label="終了日"
-                  value={editedProperty?.availableTo ? new Date(editedProperty.availableTo.toDate()).toISOString().split('T')[0] : ''}
+                  value={editedProperty?.availableTo instanceof Timestamp
+                    ? editedProperty.availableTo.toDate().toISOString().split('T')[0]
+                    : ''}
                   onChange={handleInputChange}
                 />
               </>
             ) : (
               <Typography>
-                {renderValue(property.availableFrom)} から {renderValue(property.availableTo)} まで
+                {property.availableFrom && property.availableTo
+                  ? `${formatDate(property.availableFrom)} から ${formatDate(property.availableTo)} まで`
+                  : '予約可能期間は設定されていません'}
               </Typography>
             )}
           </section>
@@ -728,7 +736,7 @@ export default function PropertyDetail() {
               <ul>
                 {property.nearbyFacilities?.map((facility, index) => (
                   <li key={index}>{facility.name} - {facility.distance}km</li>
-                )) || <li>近隣の施設情報はありません</li>}
+                )) || <li>近隣の施設情報はりません</li>}
               </ul>
             )}
           </section>
@@ -774,52 +782,7 @@ export default function PropertyDetail() {
               )
             )}
           </section>
-
-          {/* デバッグ用：すべてのプロパティを表示 */}
-          <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800">デバッグ情報</Typography>
-            {Object.entries(property).map(([key, value]) => (
-              <div key={key}>
-                <strong>{key}:</strong> {renderValue(value)}
-              </div>
-            ))}
-          </section>
-
         </Container>
-        
-        {/* 編集ボタンを右下に固定 */}
-        <div className="fixed bottom-8 right-8">
-          {isEditing ? (
-            <>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                className="mr-2"
-              >
-                保存
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary"
-                startIcon={<CancelIcon />}
-                onClick={handleCancel}
-              >
-                キャンセル
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<EditIcon />}
-              onClick={handleEdit}
-            >
-              編集
-            </Button>
-          )}
-        </div>
       </div>
     </Layout>
   );
