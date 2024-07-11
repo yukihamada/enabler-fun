@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, auth } from '../../../lib/firebase';
+import { db } from '../../../lib/firebase';
 import { collection, addDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, FirestoreError, serverTimestamp, query, where } from 'firebase/firestore';
 
 function handleError(error: unknown) {
@@ -22,11 +22,6 @@ function handleError(error: unknown) {
 // POST: 新しい民泊施設を登録
 export async function POST(request: Request) {
   try {
-    const user = auth.currentUser;
-    if (!user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-    }
-
     const propertiesCollection = collection(db, 'properties');
     const newProperty = await request.json();
 
@@ -68,7 +63,6 @@ export async function POST(request: Request) {
 
     const propertyData = {
       ...newProperty,
-      ownerId: user.uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
@@ -103,11 +97,6 @@ export async function POST(request: Request) {
 // GET: 民泊施設を取得（全てまたは特定の1件）
 export async function GET(request: Request, { params }: { params?: { id?: string } } = {}) {
   try {
-    const user = auth.currentUser;
-    if (!user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-    }
-
     if (params?.id) {
       // 特定の民泊施設を取得
       const propertyDoc = doc(db, 'properties', params.id);
@@ -118,16 +107,12 @@ export async function GET(request: Request, { params }: { params?: { id?: string
       }
 
       const propertyData = propertySnapshot.data();
-      if (propertyData.ownerId !== user.uid) {
-        return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 });
-      }
 
       return NextResponse.json({ id: propertySnapshot.id, ...propertyData });
     } else {
       // 全ての民泊施設を取得
       const propertiesCollection = collection(db, 'properties');
-      const q = query(propertiesCollection, where("ownerId", "==", user.uid));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getDocs(propertiesCollection);
 
       const properties = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -144,11 +129,6 @@ export async function GET(request: Request, { params }: { params?: { id?: string
 // PUT: 民泊施設情報を更新
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    const user = auth.currentUser;
-    if (!user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-    }
-
     const propertyDoc = doc(db, 'properties', params.id);
     const propertySnapshot = await getDoc(propertyDoc);
 
@@ -157,9 +137,6 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     const propertyData = propertySnapshot.data();
-    if (propertyData.ownerId !== user.uid) {
-      return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 });
-    }
 
     const updatedProperty = await request.json();
 
@@ -180,21 +157,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 // DELETE: 民泊施設を削除
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const user = auth.currentUser;
-    if (!user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-    }
-
     const propertyDoc = doc(db, 'properties', params.id);
     const propertySnapshot = await getDoc(propertyDoc);
 
     if (!propertySnapshot.exists()) {
       return NextResponse.json({ error: '指定された民泊施設が見つかりません' }, { status: 404 });
-    }
-
-    const propertyData = propertySnapshot.data();
-    if (propertyData.ownerId !== user.uid) {
-      return NextResponse.json({ error: 'アクセス権限がありません' }, { status: 403 });
     }
 
     await deleteDoc(propertyDoc);
