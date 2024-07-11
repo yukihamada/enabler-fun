@@ -1,21 +1,21 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../lib/firebase';
-import { collection, addDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, FirestoreError, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp, FirestoreError } from 'firebase/firestore';
 
 function handleError(error: unknown) {
   if (error instanceof FirestoreError) {
     switch (error.code) {
       case 'permission-denied':
-        return NextResponse.json({ error: 'データベースへの権限がありません' }, { status: 403 });
+        return NextResponse.json({ error: 'データベースへの権限がありません', details: error }, { status: 403 });
       case 'unavailable':
-        return NextResponse.json({ error: 'データベースが一時的に利用できません' }, { status: 503 });
+        return NextResponse.json({ error: 'データベースが一時的に利用できません', details: error }, { status: 503 });
       default:
-        return NextResponse.json({ error: `Firestoreエラー: ${error.message}` }, { status: 500 });
+        return NextResponse.json({ error: `Firestoreエラー: ${error.message}`, details: error }, { status: 500 });
     }
   } else if (error instanceof SyntaxError) {
-    return NextResponse.json({ error: '無効なJSONデータが送信されました' }, { status: 400 });
+    return NextResponse.json({ error: '無効なJSONデータが送信されました', details: error }, { status: 400 });
   } else {
-    return NextResponse.json({ error: `予期せぬエラーが発生しました: ${error instanceof Error ? error.message : String(error)}` }, { status: 500 });
+    return NextResponse.json({ error: `予期せぬエラーが発生しました: ${error instanceof Error ? error.message : String(error)}`, details: error }, { status: 500 });
   }
 }
 
@@ -146,6 +146,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       ...updatedProperty,
       updatedAt: serverTimestamp()
     };
+
+    // 問題箇所を見つけるためにログを追加
+    console.log("Updating document:", JSON.stringify(updatedPropertyData, null, 2));
 
     await updateDoc(propertyDoc, updatedPropertyData);
 
