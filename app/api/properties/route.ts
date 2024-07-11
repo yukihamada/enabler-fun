@@ -38,13 +38,6 @@ export async function POST(request: Request) {
       }
     });
 
-    // 価格のチェック
-    if (typeof newProperty.price === 'string') {
-      newProperty.price = parseFloat(newProperty.price);
-    }
-    if (typeof newProperty.price !== 'number' || isNaN(newProperty.price) || newProperty.price <= 0) {
-      suggestions.push('有効な価格を設定してください。例：「100000」（10万円）のように数値で入力してください。');
-    }
 
     // その他のフィールドのチェックと提案
     if (!newProperty.bedrooms) suggestions.push('寝室の数を指定すると良いでしょう。例：「2ベッドルーム」と記載することで、家族連れの宿泊者にアピー��できます。');
