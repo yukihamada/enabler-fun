@@ -36,7 +36,7 @@ interface NewProperty {
 const requiredFields = [
   { 
     id: 'title', 
-    label: '物件���イトルを入力てください。', 
+    label: '物件タイトルを入力してください。', 
     type: 'text', 
     placeholder: '物件タイトル', 
     example: '例: 渋谷駅徒歩5分！モダンな1LDKアパートメント'
@@ -46,7 +46,7 @@ const requiredFields = [
     label: '物件の説明を入力してください。', 
     type: 'textarea', 
     placeholder: '物件の説明', 
-    example: '例: 渋谷の心部にある明る清潔な1LDKアパートメント。最新の家電を完備し、長期滞在にも最適です。'
+    example: '例: 渋谷の中心部にある明るく清潔な1LDKアパートメント。最新の家電を完備し、長期滞在にも最適です。'
   },
   { 
     id: 'address', 
@@ -106,7 +106,7 @@ const Properties = () => {
         const docRef = await addDoc(propertiesCollection, newProperty);
         console.log("Document written with ID: ", docRef.id);
         setNewProperty({ title: '', description: '', address: '', isPublished: true });
-        alert('物件情報が常に追加されました。');
+        alert('物件情報が正常に追加されました。');
       } catch (error: unknown) {
         console.error('物件の追加中にエラーが発生しました:', error);
         alert(`物件の追加中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`);

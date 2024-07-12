@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize } from '@mui/material';
 import Image from 'next/image';
@@ -82,6 +82,7 @@ export default function PropertyDetail() {
   const [loading, setLoading] = useState(true);
   const [editedProperty, setEditedProperty] = useState<Property | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isRealTimeUpdating, setIsRealTimeUpdating] = useState(false);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -107,13 +108,34 @@ export default function PropertyDetail() {
     };
 
     fetchProperty();
-  }, [id]);
+
+    // リアルタイム更新のためのリスナーを設定
+    let unsubscribe: () => void;
+    if (isEditing && id) {
+      const docRef = doc(db, 'properties', id);
+      unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const propertyData = { id: docSnap.id, ...docSnap.data() } as Property;
+          setEditedProperty(propertyData);
+          setIsRealTimeUpdating(true);
+        }
+      });
+    }
+
+    // クリーンアップ関数
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [id, isEditing]);
 
   const handleEdit = () => {
     setIsEditing(true);
     if (property) {
       setEditedProperty({...property});
     }
+    setIsRealTimeUpdating(false);
   };
 
   const handleSave = async () => {
@@ -124,6 +146,7 @@ export default function PropertyDetail() {
       await updateDoc(docRef, updateData);
       setProperty(editedProperty);
       setIsEditing(false);
+      setIsRealTimeUpdating(false);
     } catch (error) {
       console.error('物件の更新中にエラーが発生しました:', error);
     }
@@ -132,6 +155,7 @@ export default function PropertyDetail() {
   const handleCancel = () => {
     setIsEditing(false);
     setEditedProperty(null);
+    setIsRealTimeUpdating(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: any } }) => {
@@ -207,6 +231,11 @@ export default function PropertyDetail() {
                 >
                   キャンセル
                 </Button>
+                {isRealTimeUpdating && (
+                  <Typography variant="caption" className="ml-2 text-green-600">
+                    リアルタイム更新中
+                  </Typography>
+                )}
               </>
             ) : (
               <Button
@@ -236,7 +265,7 @@ export default function PropertyDetail() {
                       }}
                     />
                     <Typography variant="caption" className="mt-1 text-gray-600">
-                      各URLを新しい行に入力してください。
+                      各URLを新しい行に入力してく���さい。
                     </Typography>
                   </div>
                 ) : (
@@ -331,7 +360,7 @@ export default function PropertyDetail() {
                     multiline
                     rows={4}
                     name="description"
-                    label="説明"
+                    label="説��"
                     value={editedProperty?.description || ''}
                     onChange={handleInputChange}
                     className="mb-6"
@@ -366,7 +395,7 @@ export default function PropertyDetail() {
               <TextField
                 fullWidth
                 name="amenities"
-                label="アメニティ (カン��区切り)"
+                label="アメニティ (カン区切り)"
                 value={(editedProperty?.amenities ?? []).join(', ')}
                 onChange={(e) => handleArrayInputChange('amenities', e.target.value.split(',').map(item => item.trim()))}
                 className="mb-4"
@@ -778,7 +807,7 @@ export default function PropertyDetail() {
                   </GoogleMap>
                 </LoadScript>
               ) : (
-                <Typography>地図情報が利用できません</Typography>
+                <Typography>地図情報が利用でき���せん</Typography>
               )
             )}
           </section>

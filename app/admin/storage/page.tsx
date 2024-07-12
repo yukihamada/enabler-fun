@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { ref, listAll, uploadBytes, StorageReference, getDownloadURL } from 'firebase/storage'
+import { ref, listAll, uploadBytes, StorageReference, getDownloadURL, deleteObject } from 'firebase/storage'
 import { storage } from '@/lib/firebase'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
@@ -20,7 +20,7 @@ export default function AdminStorage() {
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   const copyToClipboard = (url: string) => {
     navigator.clipboard.writeText(url).then(() => {
@@ -43,7 +43,7 @@ export default function AdminStorage() {
       if (error instanceof Error) {
         setError(`エラー: ${error.message}`);
       } else {
-        setError('不明なエラーが発生しました');
+        setError('不明なエ���ーが発生しました');
       }
     }
   }, []);
@@ -66,8 +66,8 @@ export default function AdminStorage() {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      await handleFileUpload(e.dataTransfer.files)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      await handleFileUpload(e.dataTransfer.files[0])
     }
   }
 
@@ -77,37 +77,42 @@ export default function AdminStorage() {
     return `${hash}.${extension}`
   }
 
-  const handleFileUpload = async (files: FileList) => {
-    if (files.length === 0) return
+  const handleFileUpload = async (file: File) => {
+    if (!file) return
 
     setUploading(true)
-    const newUploadProgress: { [key: string]: number } = {}
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      const hashedFileName = hashFileName(file.name)
-      const storageRef = ref(storage, `image/${hashedFileName}`)
-      newUploadProgress[hashedFileName] = 0
-      setUploadProgress(prev => ({ ...prev, ...newUploadProgress }))
-
-      try {
-        await uploadBytes(storageRef, file)
-        console.log(`ファイル "${file.name}" がアップロードされました`)
-        newUploadProgress[hashedFileName] = 100
-        setUploadProgress(prev => ({ ...prev, ...newUploadProgress }))
-      } catch (error) {
-        console.error(`ファイル "${file.name}" のアップロードに失敗しました:`, error)
-        newUploadProgress[hashedFileName] = -1
-        setUploadProgress(prev => ({ ...prev, ...newUploadProgress }))
-      }
+    const hashedFileName = hashFileName(file.name)
+    const storageRef = ref(storage, `image/${hashedFileName}`);
+    try {
+      await uploadBytes(storageRef, file);
+      console.log('ファイルがアップロードされました');
+      await listFiles();
+    } catch (error) {
+      console.error('ファイルのアップロードに失敗しました:', error);
     }
-
-    await listFiles()
     setUploading(false)
   }
 
   const onButtonClick = () => {
     fileInputRef.current?.click()
+  }
+
+  const handleDelete = async (fileRef: StorageReference) => {
+    setDeleting(fileRef.name)
+    try {
+      await deleteObject(fileRef)
+      console.log(`ファイル "${fileRef.name}" が削除されました`)
+      await listFiles()
+    } catch (error) {
+      console.error(`ファイル "${fileRef.name}" の削除に失敗しました:`, error)
+      if (error instanceof Error) {
+        setError(`削除エラー: ${error.message}`)
+      } else {
+        setError('ファイルの削除中に不明なエラーが発生しました')
+      }
+    } finally {
+      setDeleting(null)
+    }
   }
 
   return (
@@ -128,21 +133,14 @@ export default function AdminStorage() {
           <input
             type="file"
             ref={fileInputRef}
-            onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+            onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
             style={{ display: 'none' }}
             accept="image/*"
-            multiple
           />
           <p className="text-center text-gray-600">
-            {uploading ? 'アップロード中...' : 'ここに複数のファイルをドラッグ＆ドロップするか、クリックしてファイルを選択してください'}
+            {uploading ? 'アップロード中...' : 'ここにファイルをドラッグ＆ドロップするか、クリックしてファイルを選択してください'}
           </p>
         </div>
-
-        {Object.entries(uploadProgress).map(([fileName, progress]) => (
-          <div key={fileName} className="mb-2">
-            <p>{fileName}: {progress === 100 ? '完了' : progress === -1 ? 'エラー' : `${progress}%`}</p>
-          </div>
-        ))}
 
         <h2 className="text-2xl font-bold mb-4 text-gray-800">アップロード済みファイル</h2>
         {files.length > 0 ? (
@@ -159,12 +157,21 @@ export default function AdminStorage() {
                 </div>
                 <div className="p-4">
                   <p className="text-sm text-gray-600 truncate">{file.ref.name}</p>
-                  <button
-                    onClick={() => copyToClipboard(file.url)}
-                    className="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                  >
-                    {copiedUrl === file.url ? 'コピー済み' : 'URLをコピー'}
-                  </button>
+                  <div className="mt-2 flex justify-between">
+                    <button
+                      onClick={() => copyToClipboard(file.url)}
+                      className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    >
+                      {copiedUrl === file.url ? 'コピー済み' : 'URLをコピー'}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(file.ref)}
+                      className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                      disabled={deleting === file.ref.name}
+                    >
+                      {deleting === file.ref.name ? '削除中...' : '削除'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

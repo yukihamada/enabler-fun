@@ -36,9 +36,13 @@ export async function PUT(
       updatedAt: serverTimestamp()
     });
 
+    // 更新された民泊施設のURLを生成
+    const updatedPropertyUrl = `/properties/${params.id}`;
+
     return NextResponse.json({ 
       message: '民泊施設情報が更新されました',
-      updatedId: params.id
+      updatedId: params.id,
+      url: updatedPropertyUrl
     }, { status: 200 });
   } catch (error) {
     return handleError(error);
