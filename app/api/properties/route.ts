@@ -20,10 +20,10 @@ export async function GET() {
 // POST: 新しい民泊施設を作成
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const createProperty = await request.json();
     const propertiesCollection = collection(db, 'properties');
     const docRef = await addDoc(propertiesCollection, {
-      ...body.createProperty,
+      ...createProperty,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       message: '新しい民泊施設が作成されました',
       id: docRef.id,
       url: `https://enabler.fun/properties/${docRef.id}`,
-      data: body // リクエストデータを含める
+      data: createProperty // リクエストデータを含める
     }, { status: 201 });
   } catch (error) {
     return handleError(error);

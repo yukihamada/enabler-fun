@@ -213,6 +213,100 @@ components:
             type: string
           example: ["高級アメニティ", "ビーチフロント", "無料Wi-Fi"]
           description: "物件の設備・アメニティ一覧"
+        surroundings:
+          type: string
+          example: "ビーチまで徒歩5分、近くにレストランやショッピングモールあり"
+          description: "周辺環境の説明"
+        nearbyStations:
+          type: array
+          items:
+            type: string
+          example: ["ワイキキ駅から徒歩10分", "ホノルル空港から車で30分"]
+          description: "最寄りの駅や交通機関"
+        maxGuests:
+          type: integer
+          minimum: 1
+          example: 6
+          description: "最大宿泊人数"
+        smokingAllowed:
+          type: boolean
+          example: false
+          description: "喫煙可否"
+        petsAllowed:
+          type: boolean
+          example: true
+          description: "ペット可否"
+        wifiInfo:
+          type: string
+          example: "高速Wi-Fi完備、パスワードは部屋に掲示"
+          description: "Wi-Fi情報"
+        cleaningFee:
+          type: number
+          example: 15000
+          description: "清掃料金"
+        parking:
+          type: string
+          example: "2台分の無料駐車場あり"
+          description: "駐車場情報"
+        cancellationPolicy:
+          type: string
+          example: "チェックイン7日前までキャンセル無料、それ以降は1泊分のキャンセル料"
+          description: "キャンセルポリシー"
+        nearbyAttractions:
+          type: array
+          items:
+            type: string
+          example: ["ワイキキビーチ", "ダイヤモンドヘッド", "アラモアナショッピングセンター"]
+          description: "近隣の観光スポット"
+        furnishings:
+          type: array
+          items:
+            type: string
+          example: ["キングサイズベッド", "大型テレビ", "フルキッチン"]
+          description: "主な設備・家具"
+        availableFrom:
+          type: string
+          format: date
+          example: "2023-07-01"
+          description: "予約可能開始日"
+        availableTo:
+          type: string
+          format: date
+          example: "2024-06-30"
+          description: "予約可能終了日"
+        specialOffers:
+          type: array
+          items:
+            type: string
+          example: ["7泊以上で10%オフ", "ハネムーン特典あり"]
+          description: "特別オファー"
+        nearbyFacilities:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              distance:
+                type: number
+          example: [{"name": "コンビニ", "distance": 0.2}, {"name": "病院", "distance": 1.5}]
+          description: "近隣の施設"
+        latitude:
+          type: number
+          example: 21.2816
+          description: "緯度"
+        longitude:
+          type: number
+          example: -157.8372
+          description: "経度"
+        checkInTime:
+          type: string
+          example: "15:00"
+          description: "チェックイン時間"
+        checkOutTime:
+          type: string
+          example: "11:00"
+          description: "チェックアウト時間"
     PropertyInput:
       type: object
       required:
@@ -251,6 +345,61 @@ components:
           type: array
           items:
             type: string
+        surroundings:
+          type: string
+        nearbyStations:
+          type: array
+          items:
+            type: string
+        maxGuests:
+          type: integer
+        smokingAllowed:
+          type: boolean
+        petsAllowed:
+          type: boolean
+        wifiInfo:
+          type: string
+        cleaningFee:
+          type: number
+        parking:
+          type: string
+        cancellationPolicy:
+          type: string
+        nearbyAttractions:
+          type: array
+          items:
+            type: string
+        furnishings:
+          type: array
+          items:
+            type: string
+        availableFrom:
+          type: string
+          format: date
+        availableTo:
+          type: string
+          format: date
+        specialOffers:
+          type: array
+          items:
+            type: string
+        nearbyFacilities:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              distance:
+                type: number
+        latitude:
+          type: number
+        longitude:
+          type: number
+        checkInTime:
+          type: string
+        checkOutTime:
+          type: string
     Properties:
       type: array
       maxItems: 100

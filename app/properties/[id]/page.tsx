@@ -265,7 +265,7 @@ export default function PropertyDetail() {
                       }}
                     />
                     <Typography variant="caption" className="mt-1 text-gray-600">
-                      各URLを新しい行に入力してく���さい。
+                      各URLを新しい行に入力してください。
                     </Typography>
                   </div>
                 ) : (
@@ -282,7 +282,7 @@ export default function PropertyDetail() {
                         />
                       ))
                     ) : (
-                      <Typography>画像がません</Typography>
+                      <Typography>画像がありません</Typography>
                     )}
                   </div>
                 )}
@@ -318,7 +318,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="bathrooms"
-                      label="バスム数"
+                      label="バスルーム数"
                       type="number"
                       value={editedProperty?.bathrooms || ''}
                       onChange={handleInputChange}
@@ -345,7 +345,7 @@ export default function PropertyDetail() {
                       </div>
                       <div className="flex items-center">
                         <FaBath className="text-indigo-600 mr-2" />
-                        <span>{property.bathrooms} スルー</span>
+                        <span>{property.bathrooms} バスルーム</span>
                       </div>
                       <div className="flex items-center">
                         <FaRuler className="text-indigo-600 mr-2" />
@@ -360,7 +360,7 @@ export default function PropertyDetail() {
                     multiline
                     rows={4}
                     name="description"
-                    label="説��"
+                    label="説明"
                     value={editedProperty?.description || ''}
                     onChange={handleInputChange}
                     className="mb-6"
@@ -395,7 +395,7 @@ export default function PropertyDetail() {
               <TextField
                 fullWidth
                 name="amenities"
-                label="アメニティ (カン区切り)"
+                label="アメニティ (カンマ区切り)"
                 value={(editedProperty?.amenities ?? []).join(', ')}
                 onChange={(e) => handleArrayInputChange('amenities', e.target.value.split(',').map(item => item.trim()))}
                 className="mb-4"
@@ -631,7 +631,7 @@ export default function PropertyDetail() {
 
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaTree className="mr-2 text-indigo-600" /> 周辺情
+              <FaTree className="mr-2 text-indigo-600" /> 周辺情報
             </Typography>
             <Grid container spacing={3}>
               {isEditing ? (
@@ -649,7 +649,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="furnishings"
-                      label="主な設備・具 (カンマ区切り)"
+                      label="主な設備・道具 (カンマ区切り)"
                       value={(editedProperty?.furnishings ?? []).join(', ')}
                       onChange={(e) => handleArrayInputChange('furnishings', e.target.value.split(',').map(item => item.trim()))}
                     />
@@ -807,7 +807,7 @@ export default function PropertyDetail() {
                   </GoogleMap>
                 </LoadScript>
               ) : (
-                <Typography>地図情報が利用でき���せん</Typography>
+                <Typography>地図情報が利用できません</Typography>
               )
             )}
           </section>
