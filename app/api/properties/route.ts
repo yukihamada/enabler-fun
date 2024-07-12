@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 // GET: すべての民泊施設を取得
 export async function GET() {
@@ -20,10 +20,11 @@ export async function GET() {
 // POST: 新しい民泊施設を作成
 export async function POST(request: Request) {
   try {
-    const newProperty = await request.json();
+    const { createProperty } = await request.json();
+    const newPropertyData = JSON.parse(createProperty);
     const propertiesCollection = collection(db, 'properties');
     const docRef = await addDoc(propertiesCollection, {
-      ...newProperty,
+      ...newPropertyData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -31,6 +32,39 @@ export async function POST(request: Request) {
       message: '新しい民泊施設が作成されました',
       id: docRef.id 
     }, { status: 201 });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+// PUT: 民泊施設情報を更新
+export async function PUT(request: Request) {
+  try {
+    const { updateProperty } = await request.json();
+    const propertiesCollection = collection(db, 'properties');
+
+    // 単一の更新か複数の更新かを判断
+    const updateProperties = Array.isArray(updateProperty) ? updateProperty : [updateProperty];
+
+    const updateResults = await Promise.all(updateProperties.map(async (property) => {
+      const propertyData = typeof property === 'string' ? JSON.parse(property) : property;
+      const { propertyId, ...updateData } = propertyData;
+      const docRef = doc(propertiesCollection, propertyId);
+      await updateDoc(docRef, {
+        ...updateData,
+        updatedAt: serverTimestamp()
+      });
+      return { 
+        id: propertyId, 
+        message: '民泊施設が更新されました',
+        url: `/properties/${propertyId}`
+      };
+    }));
+
+    return NextResponse.json({ 
+      message: '民泊施設が更新されました',
+      results: updateResults 
+    }, { status: 200 });
   } catch (error) {
     return handleError(error);
   }

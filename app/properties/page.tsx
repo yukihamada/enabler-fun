@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { FaBed, FaBath, FaRulerCombined, FaYenSign } from 'react-icons/fa';
 
 interface Property {
   id: string;
@@ -43,10 +44,10 @@ export default function PropertiesPage() {
 
   return (
     <Layout>
-      <div className="bg-gray-100 min-h-screen py-12">
+      <div className="bg-gray-100 min-h-screen py-8">
         <div className="container mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-8 text-center text-gray-800">物件一覧</h1>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <h1 className="text-3xl font-semibold mb-6 text-center text-gray-800">物件一覧</h1>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {properties.map((property) => (
               <PropertyCard key={property.id} property={property} />
             ))}
@@ -103,11 +104,14 @@ function PropertyCard({ property }: { property: Property }) {
         <p className="text-gray-600 mb-4">{property.address}</p>
         <p className="text-gray-700 mb-4 line-clamp-3">{property.description}</p>
         <div className="flex justify-between items-center text-gray-700 mb-4">
-          <span className="text-xl font-bold text-indigo-600">
-            ¥{property.price?.toLocaleString() ?? '価格未定'} / 泊
+          <span className="text-xl font-bold text-indigo-600 flex items-center">
+            <FaYenSign className="mr-1" />
+            {property.price?.toLocaleString() ?? '価格未定'} / 泊
           </span>
-          <span>
-            {property.bedrooms ?? '-'}寝室 • {property.bathrooms ?? '-'}バス • {property.area ?? '-'}m²
+          <span className="flex items-center">
+            <FaBed className="mr-1" /> {property.bedrooms ?? '-'} •
+            <FaBath className="mx-1" /> {property.bathrooms ?? '-'} •
+            <FaRulerCombined className="mx-1" /> {property.area ?? '-'}m²
           </span>
         </div>
         <div className="flex flex-wrap gap-2">

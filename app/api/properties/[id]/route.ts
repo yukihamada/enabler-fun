@@ -22,27 +22,39 @@ export async function GET(
   }
 }
 
-// PUT: 民泊施設情報を更新
-export async function PUT(
+// PATCH: 特定の民泊施設を更新
+export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const updatedProperty = await request.json();
+    const { updateProperty } = await request.json();
+    const updateData = JSON.parse(updateProperty);
     const propertyDoc = doc(db, 'properties', params.id);
+    const propertySnapshot = await getDoc(propertyDoc);
+
+    if (!propertySnapshot.exists()) {
+      return NextResponse.json({ error: '指定された民泊施設が見つかりません' }, { status: 404 });
+    }
+
+    if (!updateData || typeof updateData !== 'object') {
+      return NextResponse.json({ error: '無効な更新データです' }, { status: 400 });
+    }
+
+    const { propertyId, ...propertyData } = updateData;
+
+    if (propertyId && propertyId !== params.id) {
+      return NextResponse.json({ error: 'プロパティIDが一致しません' }, { status: 400 });
+    }
 
     await updateDoc(propertyDoc, {
-      ...updatedProperty,
+      ...propertyData,
       updatedAt: serverTimestamp()
     });
 
-    // 更新された民泊施設のURLを生成
-    const updatedPropertyUrl = `/properties/${params.id}`;
-
     return NextResponse.json({ 
-      message: '民泊施設情報が更新されました',
-      updatedId: params.id,
-      url: updatedPropertyUrl
+      message: '民泊施設が更新されました',
+      id: params.id
     }, { status: 200 });
   } catch (error) {
     return handleError(error);
