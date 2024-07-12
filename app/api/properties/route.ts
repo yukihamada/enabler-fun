@@ -20,17 +20,18 @@ export async function GET() {
 // POST: 新しい民泊施設を作成
 export async function POST(request: Request) {
   try {
-    const newPropertyData = await request.json();
+    const body = await request.json();
     const propertiesCollection = collection(db, 'properties');
     const docRef = await addDoc(propertiesCollection, {
-      ...newPropertyData,
+      ...body.createProperty,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
     return NextResponse.json({
       message: '新しい民泊施設が作成されました',
       id: docRef.id,
-      url: `https://enabler.fun/properties/${docRef.id}`
+      url: `https://enabler.fun/properties/${docRef.id}`,
+      data: body // リクエストデータを含める
     }, { status: 201 });
   } catch (error) {
     return handleError(error);
@@ -53,14 +54,15 @@ export async function PUT(request: Request) {
       });
       return {
         id: propertyId,
-        message: '民泊施設を更新されました',
+        message: '民泊施設が更新されました',
         url: `https://enabler.fun/properties/${propertyId}`
       };
     }));
 
     return NextResponse.json({
       message: '民泊施設が更新されました',
-      results: updateResults
+      results: updateResults,
+      data: body // リクエストデータを含める
     }, { status: 200 });
   } catch (error) {
     return handleError(error);
