@@ -30,7 +30,8 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ 
       message: '新しい民泊施設が作成されました',
-      id: docRef.id 
+      id: docRef.id, 
+      url: `https://enabler.fun/properties/${docRef.id}`
     }, { status: 201 });
   } catch (error) {
     return handleError(error);
