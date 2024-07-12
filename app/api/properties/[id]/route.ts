@@ -54,7 +54,6 @@ export async function PUT(
 
     return NextResponse.json({ 
       message: '民泊施設が更新されました',
-      id: params.id,
       url: `https://enabler.fun/properties/${params.id}`
     }, { status: 200 });
   } catch (error) {

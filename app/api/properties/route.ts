@@ -20,17 +20,17 @@ export async function GET() {
 // POST: 新しい民泊施設を作成
 export async function POST(request: Request) {
   try {
-    const { createProperty } = await request.json();
-    const newPropertyData = JSON.parse(createProperty);
+    const body = await request.json();
+    const newPropertyData = JSON.parse(body.createProperty); // 修正: body の形式に応じて変更
     const propertiesCollection = collection(db, 'properties');
     const docRef = await addDoc(propertiesCollection, {
       ...newPropertyData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: '新しい民泊施設が作成されました',
-      id: docRef.id, 
+      id: docRef.id,
       url: `https://enabler.fun/properties/${docRef.id}`
     }, { status: 201 });
   } catch (error) {
@@ -41,30 +41,27 @@ export async function POST(request: Request) {
 // PUT: 民泊施設情報を更新
 export async function PUT(request: Request) {
   try {
-    const { updateProperty } = await request.json();
-    const propertiesCollection = collection(db, 'properties');
+    const body = await request.json();
+    const updateProperties = Array.isArray(body.updateProperty) ? body.updateProperty : [body.updateProperty];
 
-    // 単一の更新か複数の更新かを判断
-    const updateProperties = Array.isArray(updateProperty) ? updateProperty : [updateProperty];
-
-    const updateResults = await Promise.all(updateProperties.map(async (property) => {
+    const updateResults = await Promise.all(updateProperties.map(async (property: string | Record<string, any>) => {
       const propertyData = typeof property === 'string' ? JSON.parse(property) : property;
       const { propertyId, ...updateData } = propertyData;
-      const docRef = doc(propertiesCollection, propertyId);
+      const docRef = doc(db, 'properties', propertyId); // 修正: doc() の引数を修正
       await updateDoc(docRef, {
         ...updateData,
         updatedAt: serverTimestamp()
       });
-      return { 
-        id: propertyId, 
+      return {
+        id: propertyId,
         message: '民泊施設が更新されました',
-        url: `/properties/${propertyId}`
+        url: `https://enabler.fun/properties/${propertyId}`
       };
     }));
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: '民泊施設が更新されました',
-      results: updateResults 
+      results: updateResults
     }, { status: 200 });
   } catch (error) {
     return handleError(error);
