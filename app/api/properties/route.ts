@@ -38,37 +38,6 @@ export async function POST(request: Request) {
   }
 }
 
-// PUT: 民泊施設情報を更新
-export async function PUT(request: Request) {
-  try {
-    const body = await request.json();
-    const updateProperties = Array.isArray(body.updateProperty) ? body.updateProperty : [body.updateProperty];
-
-    const updateResults = await Promise.all(updateProperties.map(async (property: string | Record<string, any>) => {
-      const propertyData = typeof property === 'string' ? JSON.parse(property) : property;
-      const { propertyId, ...updateData } = propertyData;
-      const docRef = doc(db, 'properties', propertyId); // 修正: doc() の引数を修正
-      await updateDoc(docRef, {
-        ...updateData,
-        updatedAt: serverTimestamp()
-      });
-      return {
-        id: propertyId,
-        message: '民泊施設が更新されました',
-        url: `https://enabler.fun/properties/${propertyId}`
-      };
-    }));
-
-    return NextResponse.json({
-      message: '民泊施設が更新されました',
-      results: updateResults,
-      data: body // リクエストデータを含める
-    }, { status: 200 });
-  } catch (error) {
-    return handleError(error);
-  }
-}
-
 // エラーハンドリング関数
 function handleError(error: unknown) {
   console.error('エラーが発生しました:', error);

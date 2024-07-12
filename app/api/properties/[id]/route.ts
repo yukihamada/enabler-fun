@@ -16,7 +16,11 @@ export async function GET(
     }
 
     const propertyData = propertySnapshot.data();
-    return NextResponse.json({ id: propertySnapshot.id, ...propertyData });
+    return NextResponse.json({
+      id: propertySnapshot.id,
+      ...propertyData,
+      requestData: { params } // リクエストデータを含める
+    });
   } catch (error) {
     return handleError(error);
   }
@@ -54,7 +58,8 @@ export async function PUT(
 
     return NextResponse.json({ 
       message: '民泊施設が更新されました',
-      url: `https://enabler.fun/properties/${params.id}`
+      url: `https://enabler.fun/properties/${params.id}`,
+      requestData: { params, updateData } // リクエストデータを含める
     }, { status: 200 });
   } catch (error) {
     return handleError(error);
@@ -76,7 +81,10 @@ export async function DELETE(
 
     await deleteDoc(propertyDoc);
 
-    return NextResponse.json({ message: '民泊施設が削除されました' }, { status: 200 });
+    return NextResponse.json({
+      message: '民泊施設が削除されました',
+      requestData: { params } // リクエストデータを含める
+    }, { status: 200 });
   } catch (error) {
     return handleError(error);
   }
