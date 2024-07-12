@@ -12,6 +12,14 @@ import { MdEdit as EditIcon, MdSave as SaveIcon, MdCancel as CancelIcon } from '
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import { Timestamp } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../../lib/firebase';
+
+interface NearbyFacility {
+  type: string;
+  name: string;
+  distance?: number;
+}
 
 interface Property {
   id: string;
@@ -25,7 +33,7 @@ interface Property {
   amenities: string[];
   surroundings: string;
   price?: number;
-  nearbyStations?: string[];
+  nearbyFacilities?: NearbyFacility[];
   checkInTime?: string;
   checkOutTime?: string;
   maxGuests?: number;
@@ -40,7 +48,6 @@ interface Property {
   availableFrom?: Timestamp;
   availableTo?: Timestamp;
   specialOffers?: string[];
-  nearbyFacilities?: { name: string; distance: number }[];
   latitude?: number;
   longitude?: number;
 }
@@ -64,7 +71,7 @@ const formatDate = (date: Timestamp | Date | undefined) => {
   if (date instanceof Date) {
     return date.toLocaleDateString('ja-JP');
   }
-  return '無効な日付';
+  return '無効な付';
 };
 
 const renderValue = (value: any): string => {
@@ -89,6 +96,8 @@ export default function PropertyDetail() {
   const [editedProperty, setEditedProperty] = useState<Property | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isRealTimeUpdating, setIsRealTimeUpdating] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -172,7 +181,7 @@ export default function PropertyDetail() {
     setEditedProperty(prev => {
       if (!prev) return null;
       if (name === 'availableFrom' || name === 'availableTo') {
-        // 日付入力の場合、Firestore のタイムスタンプ形式に変換
+        // 日付入力の場合、Firestore のタイムスンプ形式に変換
         const date = new Date(value);
         return { ...prev, [name]: Timestamp.fromDate(date) };
       }
@@ -185,6 +194,66 @@ export default function PropertyDetail() {
       if (!prev) return null;
       return { ...prev, [name]: value };
     });
+  };
+
+  const handleNearbyFacilitiesChange = (facilitiesText: string) => {
+    console.log('Input text:', facilitiesText);
+    const parsedFacilities = facilitiesText.split('\n').map(line => {
+      const [type, name, distance] = line.split(',').map(item => item.trim());
+      return { type, name, distance: distance ? parseFloat(distance) : undefined };
+    }).filter(f => f.type && f.name);
+    console.log('Parsed facilities:', parsedFacilities);
+    setEditedProperty(prev => {
+      if (!prev) return null;
+      const updated = { ...prev, nearbyFacilities: parsedFacilities };
+      console.log('Updated property:', updated);
+      return updated;
+    });
+  };
+
+  const handleAddImageUrl = () => {
+    if (newImageUrl.trim() !== '') {
+      setEditedProperty(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          imageUrls: [...(prev.imageUrls || []), newImageUrl.trim()]
+        };
+      });
+      setNewImageUrl('');
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setEditedProperty(prev => {
+      if (!prev) return null;
+      const newImageUrls = [...prev.imageUrls];
+      newImageUrls.splice(index, 1);
+      return { ...prev, imageUrls: newImageUrls };
+    });
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      const storageRef = ref(storage, `property_images/${editedProperty?.id || 'unknown'}/${file.name}`);
+      try {
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        setEditedProperty(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            imageUrls: [...(prev.imageUrls || []), downloadURL]
+          };
+        });
+        setUploadedFile(null);
+      } catch (error) {
+        console.error('画像のアップロード中にエラーが発生しました:', error);
+        setUploadedFile(null);
+      }
+    }
   };
 
   const mapContainerStyle = {
@@ -240,11 +309,7 @@ export default function PropertyDetail() {
                 >
                   キャンセル
                 </Button>
-                {isRealTimeUpdating && (
-                  <Typography variant="caption" className="ml-2 text-green-600">
-                    リアルタイム更新中
-                  </Typography>
-                )}
+
               </>
             ) : (
               <Button
@@ -263,19 +328,40 @@ export default function PropertyDetail() {
               <Grid item xs={12} md={6}>
                 {isEditing ? (
                   <div className="mb-4">
-                    <Typography variant="subtitle1" className="mb-2">画像URL（1行に1つ）</Typography>
-                    <textarea
-                      rows={4}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                      value={editedProperty?.imageUrls?.join('\n') || ''}
-                      onChange={(e) => {
-                        const urls = e.target.value.split('\n').filter(url => url.trim() !== '');
-                        handleArrayInputChange('imageUrls', urls);
-                      }}
+                    <Typography variant="subtitle1" className="mb-2">画像</Typography>
+                    {editedProperty?.imageUrls?.map((url, index) => (
+                      <div key={index} className="flex items-center mb-2">
+                        <Image 
+                          src={url}
+                          alt={`画像 ${index + 1}`}
+                          width={100}
+                          height={100}
+                          className="mr-2"
+                        />
+                        <IconButton onClick={() => handleRemoveImage(index)}>
+                          <CancelIcon />
+                        </IconButton>
+                      </div>
+                    ))}
+                    <div className="flex items-center mb-2">
+                      <TextField
+                        fullWidth
+                        value={newImageUrl}
+                        onChange={(e) => setNewImageUrl(e.target.value)}
+                        placeholder="画像URLを力"
+                        className="mr-2"
+                      />
+                      <Button onClick={handleAddImageUrl} variant="contained">
+                        追加
+                      </Button>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="mb-2"
                     />
-                    <Typography variant="caption" className="mt-1 text-gray-600">
-                      各URLを新しい行に入力してください。
-                    </Typography>
+                    {uploadedFile && <Typography>アップロード中: {uploadedFile.name}</Typography>}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
@@ -444,35 +530,43 @@ export default function PropertyDetail() {
 
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaSubway className="mr-2 text-indigo-600" /> 周辺施設
+              <FaMapMarkerAlt className="mr-2 text-indigo-600" /> 周辺施設
             </Typography>
             {isEditing ? (
-              <>
-                <TextField
-                  fullWidth
-                  name="nearbyStations"
-                  label="寄り駅 (カンマ区切り)"
-                  value={(editedProperty?.nearbyStations ?? []).join(', ')}
-                  onChange={(e) => handleArrayInputChange('nearbyStations', e.target.value.split(',').map(item => item.trim()))}
-                  className="mb-4"
-                />
-                {/* 他の周辺設（学校、ショッピング、公園）も同様に編集フィールドを追加 */}
-              </>
+              <TextField
+                fullWidth
+                multiline
+                rows={6}
+                name="nearbyFacilities"
+                label="周辺施設（タイプ,名前,距離km）"
+                value={editedProperty?.nearbyFacilities?.map(f => `${f.type},${f.name},${f.distance || ''}`).join('\n') || ''}
+                onChange={(e) => handleNearbyFacilitiesChange(e.target.value)}
+                helperText="例: 駅,東京駅,0.5"
+              />
             ) : (
-              <Grid container spacing={4}>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Paper className="p-4 bg-white shadow-md">
-                    <Typography variant="h6" className="mb-2 flex items-center text-indigo-700">
-                      <FaSubway className="mr-2" /> 最寄り駅
-                    </Typography>
-                    <ul className="list-disc pl-5 text-gray-700">
-                      {property.nearbyStations && property.nearbyStations.map((station, index) => (
-                        <li key={index}>{station}</li>
-                      ))}
-                    </ul>
-                  </Paper>
-                </Grid>
-                {/* 他の周辺施設情報（学校、ショッピング、公園）も同様に表示 */}
+              <Grid container spacing={2}>
+                {Object.entries(property.nearbyFacilities?.reduce((acc: Record<string, NearbyFacility[]>, facility) => {
+                  if (!acc[facility.type]) {
+                    acc[facility.type] = [];
+                  }
+                  acc[facility.type].push(facility);
+                  return acc;
+                }, {}) || {}).map(([type, facilities]) => (
+                  <Grid item xs={12} sm={6} md={4} key={type}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="h6" className="mb-2 flex items-center text-indigo-700">
+                        {type}
+                      </Typography>
+                      <ul className="list-disc pl-5 text-gray-700">
+                        {facilities.map((f, index) => (
+                          <li key={index}>
+                            {f.name}{f.distance ? ` (${f.distance}km)` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    </Paper>
+                  </Grid>
+                ))}
               </Grid>
             )}
           </section>
@@ -753,31 +847,7 @@ export default function PropertyDetail() {
             )}
           </section>
 
-          <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaClipboardList className="mr-2 text-indigo-600" /> 近隣の施設
-            </Typography>
-            {isEditing ? (
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                name="nearbyFacilities"
-                label="近隣の施設（名前,距離km）"
-                value={editedProperty?.nearbyFacilities?.map(f => `${f.name},${f.distance}`).join('\n') || ''}
-                onChange={(e) => handleArrayInputChange('nearbyFacilities', e.target.value.split('\n').map(line => {
-                  const [name, distance] = line.split(',');
-                  return { name, distance: parseFloat(distance) };
-                }).filter(f => f.name && !isNaN(f.distance)))}
-              />
-            ) : (
-              <ul>
-                {property.nearbyFacilities?.map((facility, index) => (
-                  <li key={index}>{facility.name} - {facility.distance}km</li>
-                )) || <li>近隣の施設情報はありません</li>}
-              </ul>
-            )}
-          </section>
+
 
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
