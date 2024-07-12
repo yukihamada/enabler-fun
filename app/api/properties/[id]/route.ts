@@ -22,8 +22,8 @@ export async function GET(
   }
 }
 
-// PATCH: 特定の民泊施設を更新
-export async function PATCH(
+// PUT: 特定の民泊施設を更新
+export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
