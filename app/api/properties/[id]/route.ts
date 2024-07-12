@@ -37,6 +37,7 @@ export async function PUT(
       return NextResponse.json({ error: '指定された民泊施設が見つかりません' }, { status: 404 });
     }
 
+    
     if (!updateData || typeof updateData !== 'object') {
       return NextResponse.json({ error: '無効な更新データです' }, { status: 400 });
     }
