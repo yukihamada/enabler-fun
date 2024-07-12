@@ -17,7 +17,7 @@ interface Property {
   bathrooms: number;
   area: number;
   description: string;
-  imageUrls: string[];
+  imageUrls: string[] | string;
   amenities: string[];
 }
 
@@ -60,73 +60,92 @@ export default function PropertiesPage() {
 
 function PropertyCard({ property }: { property: Property }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const imageUrls = property.imageUrls || [];
+
+  // URLの妥当性をチェックする関数
+  const isValidUrl = (url: string) => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // imageUrlsを適切に処理
+  const validImageUrls = (Array.isArray(property.imageUrls)
+    ? property.imageUrls
+    : typeof property.imageUrls === 'string'
+    ? property.imageUrls.split(',').map(url => url.trim())
+    : []).filter(isValidUrl);
 
   const nextImage = () => {
-    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % imageUrls.length);
+    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % validImageUrls.length);
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + imageUrls.length) % imageUrls.length);
+    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + validImageUrls.length) % validImageUrls.length);
   };
 
+  const amenities = Array.isArray(property.amenities)
+    ? property.amenities
+    : (property.amenities as string)?.split(',').map(item => item.trim()) || [];
+
   return (
-    <Link 
-      href={`/properties/${property.id}`}
-      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-    >
-      <div className="relative h-48">
-        {imageUrls.length > 0 ? (
-          <Image
-            src={imageUrls[currentImageIndex]}
-            alt={property.title}
-            layout="fill"
-            objectFit="cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-            <span className="text-gray-500">画像なし</span>
-          </div>
-        )}
-        {imageUrls.length > 1 && (
-          <>
-            <button onClick={(e) => { e.preventDefault(); prevImage(); }} className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full">
-              ←
-            </button>
-            <button onClick={(e) => { e.preventDefault(); nextImage(); }} className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full">
-              →
-            </button>
-          </>
-        )}
-      </div>
-      <div className="p-6">
-        <h2 className="text-2xl font-semibold mb-2 text-indigo-600">{property.title}</h2>
-        <p className="text-gray-600 mb-4">{property.address}</p>
-        <p className="text-gray-700 mb-4 line-clamp-3">{property.description}</p>
-        <div className="flex justify-between items-center text-gray-700 mb-4">
-          <span className="text-xl font-bold text-indigo-600 flex items-center">
-            <FaYenSign className="mr-1" />
-            {property.price?.toLocaleString() ?? '価格未定'} / 泊
-          </span>
-          <span className="flex items-center">
-            <FaBed className="mr-1" /> {property.bedrooms ?? '-'} •
-            <FaBath className="mx-1" /> {property.bathrooms ?? '-'} •
-            <FaRulerCombined className="mx-1" /> {property.area ?? '-'}m²
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {(property.amenities ?? []).slice(0, 3).map((amenity, index) => (
-            <span key={index} className="bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-sm">
-              {amenity}
-            </span>
-          ))}
-          {(property.amenities?.length ?? 0) > 3 && (
-            <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-sm">
-              +{(property.amenities?.length ?? 0) - 3}
-            </span>
+    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer">
+      <Link href={`/properties/${property.id}`}>
+        <div className="relative h-48">
+          {validImageUrls.length > 0 ? (
+            <Image
+              src={validImageUrls[currentImageIndex]}
+              alt={property.title}
+              layout="fill"
+              objectFit="cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+              <span className="text-gray-500">画像なし</span>
+            </div>
+          )}
+          {validImageUrls.length > 1 && (
+            <>
+              <button onClick={(e) => { e.preventDefault(); prevImage(); }} className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full">
+                ←
+              </button>
+              <button onClick={(e) => { e.preventDefault(); nextImage(); }} className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full">
+                →
+              </button>
+            </>
           )}
         </div>
-      </div>
-    </Link>
+        <div className="p-6">
+          <h2 className="text-2xl font-semibold mb-2 text-indigo-600">{property.title}</h2>
+          <p className="text-gray-600 mb-4">{property.address}</p>
+          <p className="text-gray-700 mb-4 line-clamp-3">{property.description}</p>
+          <div className="flex justify-between items-center text-gray-700 mb-4">
+            <span className="text-xl font-bold text-indigo-600 flex items-center">
+              <FaYenSign className="mr-1" />
+              {property.price?.toLocaleString() ?? '価格未定'} / 泊
+            </span>
+            <span className="flex items-center">
+              <FaBed className="mr-1" /> {property.bedrooms ?? '-'} •
+              <FaBath className="mx-1" /> {property.bathrooms ?? '-'} •
+              <FaRulerCombined className="mx-1" /> {property.area ?? '-'}m²
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {amenities.slice(0, 3).map((amenity, index) => (
+              <span key={index} className="bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-sm">
+                {amenity}
+              </span>
+            ))}
+            {amenities.length > 3 && (
+              <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-sm">
+                +{amenities.length - 3}
+              </span>
+            )}
+          </div>
+        </div>
+      </Link>
+    </div>
   );
 }

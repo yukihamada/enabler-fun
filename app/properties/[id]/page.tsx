@@ -11,6 +11,7 @@ import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshir
 import { MdEdit as EditIcon, MdSave as SaveIcon, MdCancel as CancelIcon } from 'react-icons/md';
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import { Timestamp } from 'firebase/firestore';
+import dynamic from 'next/dynamic';
 
 interface Property {
   id: string;
@@ -75,6 +76,11 @@ const renderValue = (value: any): string => {
   return String(value);
 };
 
+const MapComponent = dynamic(() => import('../../../components/MapComponent'), {
+  ssr: false,
+  loading: () => <p>地図を読み込み中...</p>
+});
+
 export default function PropertyDetail() {
   const params = useParams();
   const id = params.id as string;
@@ -95,10 +101,13 @@ export default function PropertyDetail() {
 
         if (docSnap.exists()) {
           const propertyData = { id: docSnap.id, ...docSnap.data() } as Property;
+          propertyData.amenities = Array.isArray(propertyData.amenities)
+            ? propertyData.amenities
+            : (propertyData.amenities as string)?.split(',').map(item => item.trim()) || [];
           setProperty(propertyData);
           setEditedProperty(propertyData);
         } else {
-          console.log('物が見つかりませ');
+          console.log('物が見つかりません');
         }
       } catch (error) {
         console.error('物件データの取得中にエラーが発生しました:', error);
@@ -402,11 +411,11 @@ export default function PropertyDetail() {
               />
             ) : (
               <Grid container spacing={2}>
-                {property.amenities && property.amenities.map((amenity) => (
-                  <Grid item key={amenity}>
+                {Array.isArray(property.amenities) ? property.amenities.slice(0, 3).map((amenity, index) => (
+                  <Grid item key={index}>
                     <Chip label={amenity} className="bg-indigo-100 text-indigo-700" />
                   </Grid>
-                ))}
+                )) : null}
               </Grid>
             )}
           </section>
@@ -442,7 +451,7 @@ export default function PropertyDetail() {
                 <TextField
                   fullWidth
                   name="nearbyStations"
-                  label="寄り駅 (ンマ区切り)"
+                  label="寄り駅 (カンマ区切り)"
                   value={(editedProperty?.nearbyStations ?? []).join(', ')}
                   onChange={(e) => handleArrayInputChange('nearbyStations', e.target.value.split(',').map(item => item.trim()))}
                   className="mb-4"
@@ -688,7 +697,7 @@ export default function PropertyDetail() {
 
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約可能期間
+              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予可能期間
             </Typography>
             {isEditing ? (
               <>
@@ -765,7 +774,7 @@ export default function PropertyDetail() {
               <ul>
                 {property.nearbyFacilities?.map((facility, index) => (
                   <li key={index}>{facility.name} - {facility.distance}km</li>
-                )) || <li>近隣の施設情報はりません</li>}
+                )) || <li>近隣の施設情報はありません</li>}
               </ul>
             )}
           </section>
@@ -797,15 +806,10 @@ export default function PropertyDetail() {
               </>
             ) : (
               property.latitude && property.longitude ? (
-                <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
-                  <GoogleMap
-                    mapContainerStyle={mapContainerStyle}
-                    center={{ lat: property.latitude, lng: property.longitude }}
-                    zoom={15}
-                  >
-                    <Marker position={{ lat: property.latitude, lng: property.longitude }} />
-                  </GoogleMap>
-                </LoadScript>
+                <MapComponent 
+                  lat={property.latitude} 
+                  lng={property.longitude} 
+                />
               ) : (
                 <Typography>地図情報が利用できません</Typography>
               )
