@@ -20,8 +20,7 @@ export async function GET() {
 // POST: 新しい民泊施設を作成
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const newPropertyData = JSON.parse(body.createProperty); // 修正: body の形式に応じて変更
+    const newPropertyData = await request.json();
     const propertiesCollection = collection(db, 'properties');
     const docRef = await addDoc(propertiesCollection, {
       ...newPropertyData,
@@ -54,7 +53,7 @@ export async function PUT(request: Request) {
       });
       return {
         id: propertyId,
-        message: '民泊施設が更新されました',
+        message: '民泊施設��更新されました',
         url: `https://enabler.fun/properties/${propertyId}`
       };
     }));

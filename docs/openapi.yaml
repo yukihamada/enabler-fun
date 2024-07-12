@@ -14,9 +14,23 @@ paths:
       operationId: listProperties
       tags:
         - properties
+      parameters:
+        - name: limit
+          in: query
+          description: 一度に返す項目数（最大100）
+          required: false
+          schema:
+            type: integer
+            maximum: 100
+            format: int32
       responses:
         '200':
           description: 民泊施設の配列
+          headers:
+            x-next:
+              description: 次のページへのリンク
+              schema:
+                type: string
           content:
             application/json:    
               schema:
@@ -44,7 +58,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PropertyCreationResponse'
+                $ref: "#/components/schemas/Property"
         default:
           description: 予期せぬエラー
           content:
@@ -61,6 +75,7 @@ paths:
         - name: propertyId
           in: path
           required: true
+          description: 取得する物件のID
           schema:
             type: string
       responses:
@@ -70,12 +85,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Property"
-        '404':
-          description: 指定された民泊施設が見つかりません
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
         default:
           description: 予期せぬエラー
           content:
@@ -83,7 +92,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     put:
-      summary: 民泊施設情報を更新
+      summary: 特定の民泊施設を更新
       operationId: updateProperty
       tags:
         - properties
@@ -91,6 +100,7 @@ paths:
         - name: propertyId
           in: path
           required: true
+          description: 更新する物件のID
           schema:
             type: string
       requestBody:
@@ -105,7 +115,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PropertyUpdateResponse'
+                $ref: "#/components/schemas/Property"
         default:
           description: 予期せぬエラー
           content:
@@ -113,7 +123,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     delete:
-      summary: 民泊施設を削除
+      summary: 特定の民泊施設を削除
       operationId: deleteProperty
       tags:
         - properties
@@ -121,21 +131,12 @@ paths:
         - name: propertyId
           in: path
           required: true
+          description: 削除する物件のID
           schema:
             type: string
       responses:
-        '200':
+        '204':
           description: 削除成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PropertyDeletionResponse'
-        '404':
-          description: 指定された民泊施設が見つかりません
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
         default:
           description: 予期せぬエラー
           content:
@@ -162,28 +163,10 @@ components:
           type: string
           example: "ハワイのビーチハウス"
           description: "物件のタイトル"
-        address:
-          type: string
-          example: "ハワイ、ワイキキビーチ近く"
-          description: "物件の所在地"
         price:
           type: number
           example: 2500000
           description: "価格（宿泊料金または購入価格）"
-        priceUnit:
-          type: string
-          enum: ["泊", "週", "月", "年", "棟", "区分"]
-          example: "泊"
-          description: "価格の単位"
-        ownershipType:
-          type: string
-          enum: ["全所有権", "共有持分", "区分所有"]
-          example: "全所有権"
-          description: "所有権の種類"
-        ownershipRatio:
-          type: string
-          example: "1/6"
-          description: "所有権の割合（共有持分や区分所有の場合）"
         bedrooms:
           type: integer
           minimum: 0
@@ -199,14 +182,23 @@ components:
           minimum: 0
           example: 190
           description: "物件の面積"
-        areaUnit:
+        address:
           type: string
-          enum: ["m²", "坪", "ft²"]
-          example: "m²"
-          description: "面積の単位"
+          example: "ハワイ、ワイキキビーチ近く"
+          description: "物件の所在地"
+        priceUnit:
+          type: string
+          enum: ["泊", "週", "月", "年", "棟", "区分"]
+          example: "泊"
+          description: "価格の単位"
+        ownershipType:
+          type: string
+          enum: ["全所有権", "共有持分", "区分所有"]
+          example: "全所有権"
+          description: "所有権の種類"
         description:
           type: string
-          example: "長い間探し続けた海沿いの一軒家が、ついに完成しました！こんな家があったらいいだろうというような夢の物件です。ワイキキビーチから車で20分の距離にあり、築100年の建物をフルリノベーションしました。"
+          example: "長い間探し続けた海沿いの一軒家が、ついに完成しました！"
           description: "物件の詳細な説明"
         imageUrls:
           type: array
@@ -219,178 +211,59 @@ components:
           type: array
           items:
             type: string
-          example: ["高級アメニティ", "ビーチフロント", "無料Wi-Fi", "フルキッチン", "バルコニー"]
+          example: ["高級アメニティ", "ビーチフロント", "無料Wi-Fi"]
           description: "物件の設備・アメニティ一覧"
-        maxGuests:
-          type: integer
-          minimum: 1
-          example: 6
-          description: "最大宿泊人数"
-        smoking:
-          type: boolean
-          example: false
-          description: "喫煙可否"
-        pets:
-          type: boolean
-          example: false
-          description: "ペット可否"
-        wifi:
-          type: boolean
-          example: true
-          description: "Wi-Fi利用可否"
-        cleaningFee:
-          type: number
-          minimum: 0
-          example: 50000
-          description: "清掃料金"
-        parking:
-          type: string
-          example: "2台まで無料駐車可能"
-          description: "駐車場情報"
-        cancellationPolicy:
-          type: string
-          example: "チェックイン14日前までキャンセル無料、以降は1泊分のキャンセル料"
-          description: "キャンセルポリシー"
-        nearbyAttractions:
-          type: array
-          items:
-            type: string
-          example: ["ワイキキビーチ", "ダイヤモンドヘッド", "アラモアナショッピングセンター"]
-          description: "近隣の観光スポット"
-        mainFacilities:
-          type: array
-          items:
-            type: string
-          example: ["プライベートプール", "バーベキューエリア", "ホームシアター"]
-          description: "主な設備・家具"
-        availablePeriod:
-          type: object
-          properties:
-            start:
-              type: string
-              format: date
-              example: "2024-04-01"
-            end:
-              type: string
-              format: date
-              example: "2024-09-30"
-          description: "予約可能期間"
-        specialOffers:
-          type: array
-          items:
-            type: object
-            properties:
-              title:
-                type: string
-                example: "7泊以上で10%オフ"
-              description:
-                type: string
-                example: "7泊以上のご予約で、総額から10%割引いたします。"
-              validUntil:
-                type: string
-                format: date
-                example: "2024-12-31"
-          description: "特別オファー"
-        nearbyFacilities:
-          type: array
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-                example: "スーパーマーケット"
-              distance:
-                type: string
-                example: "徒歩5分"
-          description: "近隣の施設"
-        mapUrl:
-          type: string
-          format: uri
-          example: "https://maps.example.com/hawaii-beach-house-001"
-          description: "物件の地図情報URL"
-        rating:
-          type: number
-          minimum: 0
-          maximum: 5
-          example: 4.8
-          description: "物件の平均評価（0-5）"
-        reviews:
-          type: array
-          items:
-            $ref: "#/components/schemas/Review"
-          description: "物件のレビュー"
-        host:
-          $ref: "#/components/schemas/Host"
-          description: "ホスト情報"
-        updatedAt:
-          type: string
-          format: date-time
-          example: "2024-03-15T09:30:00Z"
-          description: "最終更新日時"
-
-    Review:
-      type: object
-      properties:
-        id:
-          type: string
-        author:
-          type: string
-        rating:
-          type: number
-          minimum: 1
-          maximum: 5
-        comment:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-
-    Host:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        profileImage:
-          type: string
-          format: uri
-        description:
-          type: string
-        responseRate:
-          type: number
-          minimum: 0
-          maximum: 100
-        responseTime:
-          type: string
     PropertyInput:
       type: object
-      # 民泊施設の入力プロパティをここに定義
+      required:
+        - title
+        - price
+        - bedrooms
+        - bathrooms
+        - area
+      properties:
+        title:
+          type: string
+        price:
+          type: number
+        bedrooms:
+          type: integer
+        bathrooms:
+          type: integer
+        area:
+          type: number
+        address:
+          type: string
+        priceUnit:
+          type: string
+          enum: ["泊", "週", "月", "年", "棟", "区分"]
+        ownershipType:
+          type: string
+          enum: ["全所有権", "共有持分", "区分所有"]
+        description:
+          type: string
+        imageUrls:
+          type: array
+          items:
+            type: string
+            format: uri
+        amenities:
+          type: array
+          items:
+            type: string
     Properties:
       type: array
+      maxItems: 100
       items:
         $ref: "#/components/schemas/Property"
-    PropertyCreationResponse:
-      type: object
-      properties:
-        message:
-          type: string
-        id:
-          type: string
-    PropertyUpdateResponse:
-      type: object
-      properties:
-        message:
-          type: string
-        updatedId:
-          type: string
-    PropertyDeletionResponse:
-      type: object
-      properties:
-        message:
-          type: string
     Error:
       type: object
+      required:
+        - code
+        - message
       properties:
-        error:
+        code:
+          type: integer
+          format: int32
+        message:
           type: string

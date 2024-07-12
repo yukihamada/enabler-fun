@@ -28,8 +28,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { updateProperty } = await request.json();
-    const updateData = JSON.parse(updateProperty);
+    const updateData = await request.json();
     const propertyDoc = doc(db, 'properties', params.id);
     const propertySnapshot = await getDoc(propertyDoc);
 

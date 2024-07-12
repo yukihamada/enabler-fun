@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import fs from 'fs';
+import path from 'path';
 
 // エラーハンドリング関数
 function handleError(error: unknown) {
@@ -25,13 +27,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const id = url.searchParams.get('id');
-  if (id) {
-    return getProperty(req);
-  } else {
-    return getAllProperties(req);
-  }
+  
+    return getOpenApiSpec();
+  
 }
 
 export async function PUT(req: NextRequest) {
@@ -232,7 +230,7 @@ async function deleteProperty(req: NextRequest) {
     const propertySnapshot = await getDoc(propertyDoc);
 
     if (!propertySnapshot.exists()) {
-      return NextResponse.json({ error: '指定された物件が見つかりません' }, { status: 404 });
+      return NextResponse.json({ error: '指定さ���た物件が見つかりません' }, { status: 404 });
     }
 
     await deleteDoc(propertyDoc);
@@ -240,5 +238,25 @@ async function deleteProperty(req: NextRequest) {
     return NextResponse.json({ message: '物件が削除されました' }, { status: 200 });
   } catch (error) {
     return handleError(error);
+  }
+}
+
+// OpenAPI仕様を取得する関数
+async function getOpenApiSpec() {
+  const filePath = path.join(process.cwd(), 'docs', 'openapi.yaml');
+  console.log('Attempting to read file:', filePath);  // ファイルパスをログ出力
+  
+  try {
+    const fileContents = fs.readFileSync(filePath, 'utf8');
+    console.log('File contents read successfully');  // 成功時のログ
+    return new NextResponse(fileContents, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/yaml',
+      },
+    });
+  } catch (error) {
+    console.error('Error reading file:', error);  // エラー時のログ
+    return new NextResponse('Error reading OpenAPI spec', { status: 500 });
   }
 }
