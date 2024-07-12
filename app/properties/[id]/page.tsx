@@ -30,7 +30,7 @@ interface Property {
   bedrooms: number;
   bathrooms: number;
   area: number;
-  amenities: string[];
+  amenities: string[] | string | undefined;
   surroundings: string;
   price?: number;
   nearbyFacilities?: NearbyFacility[];
@@ -43,13 +43,14 @@ interface Property {
   cleaningFee?: number;
   parking?: string;
   cancellationPolicy?: string;
-  nearbyAttractions?: string[];
-  furnishings?: string[];
+  nearbyAttractions: string[];
+  furnishings: string[];
+  specialOffers: string[];
   availableFrom?: Timestamp;
   availableTo?: Timestamp;
-  specialOffers?: string[];
   latitude?: number;
   longitude?: number;
+  icalUrl?: string;
 }
 
 type AmenityKey = keyof typeof amenityIcons;
@@ -71,7 +72,7 @@ const formatDate = (date: Timestamp | Date | undefined) => {
   if (date instanceof Date) {
     return date.toLocaleDateString('ja-JP');
   }
-  return '無効な付';
+  return '無効な日時';
 };
 
 const renderValue = (value: any): string => {
@@ -110,9 +111,34 @@ export default function PropertyDetail() {
 
         if (docSnap.exists()) {
           const propertyData = { id: docSnap.id, ...docSnap.data() } as Property;
-          propertyData.amenities = Array.isArray(propertyData.amenities)
-            ? propertyData.amenities
-            : (propertyData.amenities as string)?.split(',').map(item => item.trim()) || [];
+          propertyData.amenities = (() => {
+            if (Array.isArray(propertyData.amenities)) {
+              return propertyData.amenities;
+            }
+            if (typeof propertyData.amenities === 'string') {
+              return propertyData.amenities.split(',').map(item => item.trim());
+            }
+            return [];
+          })() as string[];
+          
+          propertyData.imageUrls = (Array.isArray(propertyData.imageUrls)
+            ? propertyData.imageUrls
+            : typeof propertyData.imageUrls === 'string'
+              ? [propertyData.imageUrls as string]
+              : []) as string[];
+
+          propertyData.nearbyAttractions = Array.isArray(propertyData.nearbyAttractions)
+            ? propertyData.nearbyAttractions
+            : [];
+
+          propertyData.furnishings = Array.isArray(propertyData.furnishings)
+            ? propertyData.furnishings
+            : [];
+
+          propertyData.specialOffers = Array.isArray(propertyData.specialOffers)
+            ? propertyData.specialOffers
+            : [];
+
           setProperty(propertyData);
           setEditedProperty(propertyData);
         } else {
@@ -151,7 +177,18 @@ export default function PropertyDetail() {
   const handleEdit = () => {
     setIsEditing(true);
     if (property) {
-      setEditedProperty({...property});
+      const editedProp: Property = {
+        ...property,
+        imageUrls: Array.isArray(property.imageUrls) ? property.imageUrls :
+                   typeof property.imageUrls === 'string' ? [property.imageUrls] : [],
+        amenities: Array.isArray(property.amenities) ? property.amenities :
+                   typeof property.amenities === 'string' ? property.amenities.split(',').map(item => item.trim()) :
+                   [],
+        nearbyAttractions: Array.isArray(property.nearbyAttractions) ? property.nearbyAttractions : [],
+        furnishings: Array.isArray(property.furnishings) ? property.furnishings : [],
+        specialOffers: Array.isArray(property.specialOffers) ? property.specialOffers : [],
+      };
+      setEditedProperty(editedProp);
     }
     setIsRealTimeUpdating(false);
   };
@@ -160,13 +197,21 @@ export default function PropertyDetail() {
     if (!editedProperty) return;
     try {
       const { id, ...updateData } = editedProperty;
+      
+      // 保存前に配列プロパティを確認
+      updateData.imageUrls = Array.isArray(updateData.imageUrls) ? updateData.imageUrls : [];
+      updateData.nearbyAttractions = Array.isArray(updateData.nearbyAttractions) ? updateData.nearbyAttractions : [];
+      updateData.furnishings = Array.isArray(updateData.furnishings) ? updateData.furnishings : [];
+      updateData.specialOffers = Array.isArray(updateData.specialOffers) ? updateData.specialOffers : [];
+      updateData.amenities = Array.isArray(updateData.amenities) ? updateData.amenities : [];
+      
       const docRef = doc(db, 'properties', id);
       await updateDoc(docRef, updateData);
       setProperty(editedProperty);
       setIsEditing(false);
       setIsRealTimeUpdating(false);
     } catch (error) {
-      console.error('物件の更新中にエラーが発生しました:', error);
+      console.error('物件の更新中にエラーが発生した:', error);
     }
   };
 
@@ -181,7 +226,7 @@ export default function PropertyDetail() {
     setEditedProperty(prev => {
       if (!prev) return null;
       if (name === 'availableFrom' || name === 'availableTo') {
-        // 日付入力の場合、Firestore のタイムスンプ形式に変換
+        // 日付入力場合、Firestore のタイムスンプ形式に変換
         const date = new Date(value);
         return { ...prev, [name]: Timestamp.fromDate(date) };
       }
@@ -288,48 +333,13 @@ export default function PropertyDetail() {
     <Layout>
       <div className="bg-gray-100 min-h-screen relative">
         <Container maxWidth="lg" className="py-16">
-          {/* 編集ボタンを右上に配置 */}
-          <div className="absolute top-4 right-4">
-            {isEditing ? (
-              <>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<SaveIcon />}
-                  onClick={handleSave}
-                  className="mr-2"
-                >
-                  保存
-                </Button>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  startIcon={<CancelIcon />}
-                  onClick={handleCancel}
-                >
-                  キャンセル
-                </Button>
-
-              </>
-            ) : (
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<EditIcon />}
-                onClick={handleEdit}
-              >
-                編集
-              </Button>
-            )}
-          </div>
-
           <Paper elevation={3} className="p-8 mb-8 bg-white shadow-xl">
             <Grid container spacing={4}>
               <Grid item xs={12} md={6}>
                 {isEditing ? (
                   <div className="mb-4">
                     <Typography variant="subtitle1" className="mb-2">画像</Typography>
-                    {editedProperty?.imageUrls?.map((url, index) => (
+                    {Array.isArray(editedProperty?.imageUrls) && editedProperty.imageUrls.map((url, index) => (
                       <div key={index} className="flex items-center mb-2">
                         <Image 
                           src={url}
@@ -377,7 +387,7 @@ export default function PropertyDetail() {
                         />
                       ))
                     ) : (
-                      <Typography>画像がありません</Typography>
+                      <Typography>画像がありまん</Typography>
                     )}
                   </div>
                 )}
@@ -434,14 +444,18 @@ export default function PropertyDetail() {
                     <Typography variant="h3" className="mb-4 font-bold text-gray-800">{property.title}</Typography>
                     <Typography variant="h6" className="mb-4 text-gray-600">{property.address}</Typography>
                     <div className="flex space-x-4 mb-6">
-                      <div className="flex items-center">
-                        <FaBed className="text-indigo-600 mr-2" />
-                        <span>{property.bedrooms} 寝室</span>
-                      </div>
-                      <div className="flex items-center">
-                        <FaBath className="text-indigo-600 mr-2" />
-                        <span>{property.bathrooms} バスルーム</span>
-                      </div>
+                      {property.bedrooms > 0 && (
+                        <div className="flex items-center">
+                          <FaBed className="text-indigo-600 mr-2" />
+                          <span>{property.bedrooms} 寝室</span>
+                        </div>
+                      )}
+                      {property.bathrooms > 0 && (
+                        <div className="flex items-center">
+                          <FaBath className="text-indigo-600 mr-2" />
+                          <span>{property.bathrooms} バスルーム</span>
+                        </div>
+                      )}
                       <div className="flex items-center">
                         <FaRuler className="text-indigo-600 mr-2" />
                         <span>{property.area} m²</span>
@@ -484,14 +498,14 @@ export default function PropertyDetail() {
           
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaSnowflake className="mr-2 text-indigo-600" /> 高級アメニティ
+              <FaSnowflake className="mr-2 text-indigo-600" /> アメニティ
             </Typography>
             {isEditing ? (
               <TextField
                 fullWidth
                 name="amenities"
-                label="アメニティ (カンマ区切り)"
-                value={(editedProperty?.amenities ?? []).join(', ')}
+                label="アメニティ（カンマ区切り）"
+                value={Array.isArray(editedProperty?.amenities) ? editedProperty.amenities.join(', ') : ''}
                 onChange={(e) => handleArrayInputChange('amenities', e.target.value.split(',').map(item => item.trim()))}
                 className="mb-4"
               />
@@ -648,7 +662,7 @@ export default function PropertyDetail() {
                       <Typography variant="subtitle1" className="font-semibold flex items-center">
                         <FaPaw className="mr-2 text-indigo-600" /> ペット：
                       </Typography>
-                      <Typography>{property.petsAllowed ? '可' : '不可'}</Typography>
+                      <Typography>{property.petsAllowed ? '可' : '不'}</Typography>
                     </Paper>
                   </Grid>
                   <Grid item xs={12} sm={6} md={4}>
@@ -695,7 +709,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="cancellationPolicy"
-                      label="キャンセルリシー"
+                      label="キャンセルポリシー"
                       value={editedProperty?.cancellationPolicy || ''}
                       onChange={handleInputChange}
                     />
@@ -722,7 +736,7 @@ export default function PropertyDetail() {
                   <Grid item xs={12}>
                     <Paper className="p-4 bg-white shadow-md">
                       <Typography variant="subtitle1" className="font-semibold flex items-center">
-                        <FaFileContract className="mr-2 text-indigo-600" /> キャンセルポリシー：
+                        <FaFileContract className="mr-2 text-indigo-600" /> キャンセルポリシ：
                       </Typography>
                       <Typography>{property.cancellationPolicy}</Typography>
                     </Paper>
@@ -766,9 +780,13 @@ export default function PropertyDetail() {
                         <FaMapMarkedAlt className="mr-2 text-indigo-600" /> 近隣の観光スポット：
                       </Typography>
                       <ul className="list-disc pl-5">
-                        {property.nearbyAttractions?.map((spot, index) => (
-                          <li key={index}>{spot}</li>
-                        ))}
+                        {property.nearbyAttractions && property.nearbyAttractions.length > 0 ? (
+                          property.nearbyAttractions.map((spot, index) => (
+                            <li key={index}>{spot}</li>
+                          ))
+                        ) : (
+                          <li>近隣の観光スポット情報はありません</li>
+                        )}
                       </ul>
                     </Paper>
                   </Grid>
@@ -778,9 +796,13 @@ export default function PropertyDetail() {
                         <FaTools className="mr-2 text-indigo-600" /> 主な設備・家具：
                       </Typography>
                       <ul className="list-disc pl-5">
-                        {property.furnishings?.map((item, index) => (
-                          <li key={index}>{item}</li>
-                        ))}
+                        {property.furnishings && property.furnishings.length > 0 ? (
+                          property.furnishings.map((item, index) => (
+                            <li key={index}>{item}</li>
+                          ))
+                        ) : (
+                          <li>主な設備・家具情報はありません</li>
+                        )}
                       </ul>
                     </Paper>
                   </Grid>
@@ -847,8 +869,6 @@ export default function PropertyDetail() {
             )}
           </section>
 
-
-
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaMapMarkerAlt className="mr-2 text-indigo-600" /> 地図
@@ -885,6 +905,56 @@ export default function PropertyDetail() {
               )
             )}
           </section>
+
+          {isEditing && (
+            <section className="mb-8">
+              <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+                <FaCalendarAlt className="mr-2 text-indigo-600" /> iCal 設定
+              </Typography>
+              <TextField
+                fullWidth
+                name="icalUrl"
+                label="iCal URL"
+                value={editedProperty?.icalUrl || ''}
+                onChange={handleInputChange}
+                className="mb-4"
+              />
+            </section>
+          )}
+
+          {/* 編集ボタンを一番下の真ん中に配置 */}
+          <div className="flex justify-center mt-8">
+            {isEditing ? (
+              <>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<SaveIcon />}
+                  onClick={handleSave}
+                  className="mr-2"
+                >
+                  保存
+                </Button>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={<CancelIcon />}
+                  onClick={handleCancel}
+                >
+                  キャンセル
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<EditIcon />}
+                onClick={handleEdit}
+              >
+                編集
+              </Button>
+            )}
+          </div>
         </Container>
       </div>
     </Layout>
