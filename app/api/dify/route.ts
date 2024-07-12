@@ -1,78 +1,78 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 // エラーハンドリング関数
-function handleError(error: unknown, res: NextApiResponse) {
+function handleError(error: unknown) {
   console.error('エラーが発生しました:', error);
-  res.status(500).json({ error: 'サーバーエラーが発生しました' });
+  return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 });
 }
 
-// メインハンドラ関数
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+// メインハンドラ関数を修正
+export async function POST(req: NextRequest) {
   // Dify API リクエストの処理
-  if (req.headers['content-type'] === 'application/json' && req.method === 'POST') {
-    return handleDifyRequest(req, res);
+  if (req.headers.get('content-type') === 'application/json') {
+    return handleDifyRequest(req);
   }
 
   // 通常の API リクエストの処理
-  switch (req.method) {
-    case 'GET':
-      if (req.query.id) {
-        await getProperty(req, res);
-      } else {
-        await getAllProperties(req, res);
-      }
-      break;
-    case 'POST':
-      await createProperty(req, res);
-      break;
-    case 'PUT':
-      if (req.body.updateProperty && Array.isArray(req.body.updateProperty)) {
-        await bulkUpdateProperties(req, res);
-      } else {
-        await updateProperty(req, res);
-      }
-      break;
-    case 'DELETE':
-      await deleteProperty(req, res);
-      break;
-    default:
-      res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-      res.status(405).end(`Method ${req.method} Not Allowed`);
+  const body = await req.json();
+  if (body.updateProperty && Array.isArray(body.updateProperty)) {
+    return bulkUpdateProperties(req);
+  } else {
+    return updateProperty(req);
   }
 }
 
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const id = url.searchParams.get('id');
+  if (id) {
+    return getProperty(req);
+  } else {
+    return getAllProperties(req);
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  return updateProperty(req);
+}
+
+export async function DELETE(req: NextRequest) {
+  return deleteProperty(req);
+}
+
 // Dify リクエストハンドラ
-async function handleDifyRequest(req: NextApiRequest, res: NextApiResponse) {
+async function handleDifyRequest(req: NextRequest) {
   const expectedApiKey = process.env.NEXT_PUBLIC_DIFY_API_KEY;
-  const { authorization } = req.headers;
+  const authorization = req.headers.get('authorization');
 
   if (!authorization || !authorization.startsWith('Bearer ') || authorization.split(' ')[1] !== expectedApiKey) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!req.body || typeof req.body.point !== 'string' || typeof req.body.params !== 'object') {
-    return res.status(400).json({ error: 'Invalid request body' });
+  const body = await req.json();
+  if (!body || typeof body.point !== 'string' || typeof body.params !== 'object') {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { point, params } = req.body;
+  const { point, params } = body;
 
   try {
     switch (point) {
       case 'ping':
-        return res.status(200).json({ result: 'pong' });
+        return NextResponse.json({ result: 'pong' });
       case 'app.external_data_tool.query':
-        return handlePropertyInfoQuery(params, res);
+        return handlePropertyInfoQuery(params);
       default:
-        return res.status(400).json({ error: 'Not implemented' });
+        return NextResponse.json({ error: 'Not implemented' }, { status: 400 });
     }
   } catch (error) {
-    handleError(error, res);
+    return handleError(error);
   }
 }
 
-async function handlePropertyInfoQuery(params: any, res: NextApiResponse) {
+async function handlePropertyInfoQuery(params: any) {
   const propertyId = params.property_id;
 
   try {
@@ -80,7 +80,7 @@ async function handlePropertyInfoQuery(params: any, res: NextApiResponse) {
     const propertySnapshot = await getDoc(propertyDoc);
 
     if (!propertySnapshot.exists()) {
-      return res.status(200).json({ result: 'Property not found' });
+      return NextResponse.json({ result: 'Property not found' }, { status: 200 });
     }
 
     const propertyData = propertySnapshot.data();
@@ -92,14 +92,14 @@ async function handlePropertyInfoQuery(params: any, res: NextApiResponse) {
     Bathrooms: ${propertyData.bathrooms}
     `;
 
-    return res.status(200).json({ result });
+    return NextResponse.json({ result }, { status: 200 });
   } catch (error) {
-    return handleError(error, res);
+    return handleError(error);
   }
 }
 
 // GET: すべての物件を取得
-async function getAllProperties(req: NextApiRequest, res: NextApiResponse) {
+async function getAllProperties(req: NextRequest) {
   try {
     const propertiesCollection = collection(db, 'properties');
     const propertiesSnapshot = await getDocs(propertiesCollection);
@@ -107,35 +107,39 @@ async function getAllProperties(req: NextApiRequest, res: NextApiResponse) {
       id: doc.id,
       ...doc.data()
     }));
-    res.status(200).json(properties);
+    return NextResponse.json(properties, { status: 200 });
   } catch (error) {
-    handleError(error, res);
+    return handleError(error);
   }
 }
 
 // GET: 特定の物件を取得
-async function getProperty(req: NextApiRequest, res: NextApiResponse) {
-  const { id } = req.query;
+async function getProperty(req: NextRequest) {
+  const url = new URL(req.url);
+  const id = url.searchParams.get('id');
+  if (!id) {
+    return NextResponse.json({ error: 'IDが指定されていません' }, { status: 400 });
+  }
 
   try {
     const propertyDoc = doc(db, 'properties', String(id));
     const propertySnapshot = await getDoc(propertyDoc);
 
     if (!propertySnapshot.exists()) {
-      return res.status(404).json({ error: '指定された物件が見つかりません' });
+      return NextResponse.json({ error: '指定された物件が見つかりません' }, { status: 404 });
     }
 
     const propertyData = propertySnapshot.data();
-    res.status(200).json({ id: propertySnapshot.id, ...propertyData });
+    return NextResponse.json({ id: propertySnapshot.id, ...propertyData }, { status: 200 });
   } catch (error) {
-    handleError(error, res);
+    return handleError(error);
   }
 }
 
 // POST: 新しい物件を作成
-async function createProperty(req: NextApiRequest, res: NextApiResponse) {
+async function createProperty(req: NextRequest) {
   try {
-    const body = req.body;
+    const body = await req.json();
     const newPropertyData = typeof body.createProperty === 'string' ? JSON.parse(body.createProperty) : body.createProperty;
     const propertiesCollection = collection(db, 'properties');
     const docRef = await addDoc(propertiesCollection, {
@@ -143,28 +147,32 @@ async function createProperty(req: NextApiRequest, res: NextApiResponse) {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    res.status(201).json({
+    return NextResponse.json({
       message: '新しい物件が作成されました',
       id: docRef.id,
       url: `https://enabler.fun/properties/${docRef.id}`
-    });
+    }, { status: 201 });
   } catch (error) {
-    handleError(error, res);
+    return handleError(error);
   }
 }
 
 // PUT: 物件情報を更新
-async function updateProperty(req: NextApiRequest, res: NextApiResponse) {
-  const { id } = req.query;
+async function updateProperty(req: NextRequest) {
+  const url = new URL(req.url);
+  const id = url.searchParams.get('id');
+  if (!id) {
+    return NextResponse.json({ error: 'IDが指定されていません' }, { status: 400 });
+  }
 
   try {
-    const { updateProperty } = req.body;
+    const { updateProperty } = await req.json();
     const updateData = typeof updateProperty === 'string' ? JSON.parse(updateProperty) : updateProperty;
     const propertyDoc = doc(db, 'properties', String(id));
     const propertySnapshot = await getDoc(propertyDoc);
 
     if (!propertySnapshot.exists()) {
-      return res.status(404).json({ error: '指定された物件が見つかりません' });
+      return NextResponse.json({ error: '指定された物件が見つかりません' }, { status: 404 });
     }
 
     await updateDoc(propertyDoc, {
@@ -172,19 +180,19 @@ async function updateProperty(req: NextApiRequest, res: NextApiResponse) {
       updatedAt: serverTimestamp()
     });
 
-    res.status(200).json({
+    return NextResponse.json({
       message: '物件が更新されました',
       url: `https://enabler.fun/properties/${id}`
-    });
+    }, { status: 200 });
   } catch (error) {
-    handleError(error, res);
+    return handleError(error);
   }
 }
 
 // PUT: 複数の物件情報を更新
-async function bulkUpdateProperties(req: NextApiRequest, res: NextApiResponse) {
+async function bulkUpdateProperties(req: NextRequest) {
   try {
-    const { updateProperty } = req.body;
+    const { updateProperty } = await req.json();
     const updateProperties = Array.isArray(updateProperty) ? updateProperty : [updateProperty];
 
     const updateResults = await Promise.all(updateProperties.map(async (property: string | Record<string, any>) => {
@@ -202,31 +210,35 @@ async function bulkUpdateProperties(req: NextApiRequest, res: NextApiResponse) {
       };
     }));
 
-    res.status(200).json({
+    return NextResponse.json({
       message: '物件が更新されました',
       results: updateResults
-    });
+    }, { status: 200 });
   } catch (error) {
-    handleError(error, res);
+    return handleError(error);
   }
 }
 
 // DELETE: 物件を削除
-async function deleteProperty(req: NextApiRequest, res: NextApiResponse) {
-  const { id } = req.query;
+async function deleteProperty(req: NextRequest) {
+  const url = new URL(req.url);
+  const id = url.searchParams.get('id');
+  if (!id) {
+    return NextResponse.json({ error: 'IDが指定されていません' }, { status: 400 });
+  }
 
   try {
     const propertyDoc = doc(db, 'properties', String(id));
     const propertySnapshot = await getDoc(propertyDoc);
 
     if (!propertySnapshot.exists()) {
-      return res.status(404).json({ error: '指定された物件が見つかりません' });
+      return NextResponse.json({ error: '指定された物件が見つかりません' }, { status: 404 });
     }
 
     await deleteDoc(propertyDoc);
 
-    res.status(200).json({ message: '物件が削除されました' });
+    return NextResponse.json({ message: '物件が削除されました' }, { status: 200 });
   } catch (error) {
-    handleError(error, res);
+    return handleError(error);
   }
 }
