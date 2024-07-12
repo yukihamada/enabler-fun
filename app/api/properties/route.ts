@@ -53,7 +53,7 @@ export async function PUT(request: Request) {
       });
       return {
         id: propertyId,
-        message: '民泊施設��更新されました',
+        message: '民泊施設を更新されました',
         url: `https://enabler.fun/properties/${propertyId}`
       };
     }));

@@ -36,16 +36,16 @@ export async function PUT(
       return NextResponse.json({ error: '指定された民泊施設が見つかりません' }, { status: 404 });
     }
 
-    
     if (!updateData || typeof updateData !== 'object') {
       return NextResponse.json({ error: '無効な更新データです' }, { status: 400 });
     }
 
-    const { propertyId, ...propertyData } = updateData;
-
-    if (propertyId && propertyId !== params.id) {
+    if (updateData.id && updateData.id !== params.id) {
       return NextResponse.json({ error: 'プロパティIDが一致しません' }, { status: 400 });
     }
+
+    const propertyData = { ...updateData };
+    delete propertyData.id;
 
     await updateDoc(propertyDoc, {
       ...propertyData,
