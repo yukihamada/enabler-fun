@@ -24,6 +24,7 @@ const AdminUsers = () => {
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
 
   const formatTimestamp = (timestamp: Timestamp | undefined) => {
     if (timestamp && timestamp instanceof Timestamp) {
@@ -87,10 +88,15 @@ const AdminUsers = () => {
     }
   };
 
+  const handleLogout = () => {
+    // ログアウト処理をここに実装
+    console.log('ログアウト処理');
+    setIsLoggedIn(false);
+  };
+
   return (
     <div className="admin-container">
-      <Header />
-      <AdminLayout>
+      <AdminLayout isLoggedIn={isLoggedIn} onLogout={handleLogout}>
         <Paper elevation={3} style={{ padding: '2rem', margin: '2rem 0', backgroundColor: '#f5f5f5' }}>
           <Typography variant="h4" gutterBottom style={{ color: '#333', borderBottom: '2px solid #1976d2', paddingBottom: '10px' }}>管理者ID管理</Typography>
           {loading ? (

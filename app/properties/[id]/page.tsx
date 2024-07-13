@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs, query, where, addDoc } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize, Fab } from '@mui/material';
+import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize, Fab, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, Stepper, Step, StepLabel, Box } from '@mui/material';
 import Image from 'next/image';
 import Layout from '../../../components/Layout';
 import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshirt, FaSnowman, FaSubway, FaShoppingCart, FaTree, FaSchool, FaCocktail, FaSpa, FaCalendarAlt, FaMoneyBillWave, FaInfoCircle, FaMapMarkerAlt, FaClipboardList, FaUserFriends, FaSmoking, FaPaw, FaParking, FaFileContract, FaMapMarkedAlt, FaTools } from 'react-icons/fa';
@@ -15,6 +15,8 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../../lib/firebase';
 import Script from 'next/script';
 import MapComponent from '../../../components/MapComponent';
+import Calendar from '../../../components/Calendar';
+import { SelectChangeEvent } from '@mui/material/Select';
 
 interface NearbyFacility {
   type: string;
@@ -85,6 +87,124 @@ const renderValue = (value: any): string => {
   return String(value);
 };
 
+interface Booking {
+  propertyId: string;
+  userId: string;
+  startDate: Date;
+  endDate: Date;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  cardNumber: string;
+  name: string;
+  phoneNumber: string;
+}
+
+interface BookingFormData {
+  cardNumber: string;
+  name: string;
+  phoneNumber: string;
+}
+
+const BookingDialog: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (formData: BookingFormData) => void;
+  startDate: string;
+  endDate: string;
+}> = ({ open, onClose, onSubmit, startDate, endDate }) => {
+  const [activeStep, setActiveStep] = useState(0);
+  const [formData, setFormData] = useState<BookingFormData>({
+    cardNumber: '',
+    name: '',
+    phoneNumber: '',
+  });
+
+  const handleNext = () => {
+    setActiveStep((prevStep) => prevStep + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevStep) => prevStep - 1);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = () => {
+    onSubmit(formData);
+  };
+
+  const steps = [
+    { label: '日程確認', content: (
+      <Typography>
+        {startDate && endDate && 
+          `${new Date(startDate).toLocaleDateString('ja-JP')}から
+           ${new Date(endDate).toLocaleDateString('ja-JP')}まで予約しますか？`}
+      </Typography>
+    )},
+    { label: '支払い情報', content: (
+      <TextField
+        fullWidth
+        name="cardNumber"
+        label="クレジットカード番号"
+        value={formData.cardNumber}
+        onChange={handleInputChange}
+        margin="normal"
+      />
+    )},
+    { label: '個人情報', content: (
+      <TextField
+        fullWidth
+        name="name"
+        label="お名前"
+        value={formData.name}
+        onChange={handleInputChange}
+        margin="normal"
+      />
+    )},
+    { label: '連絡先', content: (
+      <TextField
+        fullWidth
+        name="phoneNumber"
+        label="電話番号"
+        value={formData.phoneNumber}
+        onChange={handleInputChange}
+        margin="normal"
+      />
+    )},
+  ];
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>予約確認</DialogTitle>
+      <DialogContent>
+        <Stepper activeStep={activeStep} alternativeLabel>
+          {steps.map((step, index) => (
+            <Step key={index}>
+              <StepLabel>{step.label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+        <Box mt={2}>
+          {steps[activeStep].content}
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>キャンセル</Button>
+        {activeStep > 0 && (
+          <Button onClick={handleBack}>戻る</Button>
+        )}
+        {activeStep < steps.length - 1 ? (
+          <Button onClick={handleNext}>次へ</Button>
+        ) : (
+          <Button onClick={handleSubmit} color="primary">予約を確定する</Button>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 export default function PropertyDetail() {
   const params = useParams();
   const id = params.id as string;
@@ -100,6 +220,13 @@ export default function PropertyDetail() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUsers, setAdminUsers] = useState<string[]>([]);
   const [debugInfo, setDebugInfo] = useState<string>('');
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
+  const [availableDates, setAvailableDates] = useState<Date[]>([]);
+  const [selectedStartDate, setSelectedStartDate] = useState<string>('');
+  const [selectedEndDate, setSelectedEndDate] = useState<string>('');
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -200,6 +327,42 @@ export default function PropertyDetail() {
     checkAdminStatus();
   }, [user, adminUsers]);
 
+  useEffect(() => {
+    const fetchCalendarData = async () => {
+      if (property?.icalUrl) {
+        try {
+          const response = await fetch(`/api/fetch-ical?url=${encodeURIComponent(property.icalUrl)}`);
+          const data = await response.json();
+          console.log('Fetched calendar data:', data);
+          setCalendarEvents(data.events);
+        } catch (error) {
+          console.error('iCalデータの取得に失敗しました:', error);
+        }
+      }
+    };
+    fetchCalendarData();
+  }, [property?.icalUrl]);
+
+  useEffect(() => {
+    // 利用可能な日付を生成（例：今日から30日間）
+    const generateAvailableDates = () => {
+      const dates = [];
+      const today = new Date();
+      for (let i = 0; i < 30; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        dates.push(date);
+      }
+      setAvailableDates(dates);
+    };
+
+    generateAvailableDates();
+  }, []);
+
+  const handleMonthChange = (newMonth: Date) => {
+    setCurrentMonth(newMonth);
+  };
+
   const handleEdit = () => {
     setIsEditing(true);
     if (property) {
@@ -224,7 +387,7 @@ export default function PropertyDetail() {
     try {
       const { id, ...updateData } = editedProperty;
       
-      // 保存前に配列プロパティを確認
+      // 保存前に配列プロ��ティを確認
       updateData.imageUrls = Array.isArray(updateData.imageUrls) ? updateData.imageUrls : [];
       updateData.nearbyAttractions = Array.isArray(updateData.nearbyAttractions) ? updateData.nearbyAttractions : [];
       updateData.furnishings = Array.isArray(updateData.furnishings) ? updateData.furnishings : [];
@@ -338,6 +501,60 @@ export default function PropertyDetail() {
     height: '400px'
   };
 
+  const handleDateClick = useCallback((date: Date) => {
+    if (!selectedStartDate) {
+      setSelectedStartDate(date.toISOString());
+    } else if (!selectedEndDate && date > new Date(selectedStartDate)) {
+      setSelectedEndDate(date.toISOString());
+      setIsBookingDialogOpen(true);
+    } else {
+      setSelectedStartDate(date.toISOString());
+      setSelectedEndDate('');
+    }
+  }, [selectedStartDate, selectedEndDate]);
+
+  const handleCloseBookingDialog = () => {
+    setIsBookingDialogOpen(false);
+    setSelectedStartDate('');
+    setSelectedEndDate('');
+  };
+
+  const handleStartDateChange = (event: SelectChangeEvent<string>) => {
+    setSelectedStartDate(event.target.value as string);
+  };
+
+  const handleEndDateChange = (event: SelectChangeEvent<string>) => {
+    setSelectedEndDate(event.target.value as string);
+  };
+
+  const handleBookingSubmit = async (formData: BookingFormData) => {
+    if (!user || !selectedStartDate || !selectedEndDate || !property) {
+      console.error('予約に必要な情報が不足しています');
+      return;
+    }
+
+    try {
+      const bookingData: Booking = {
+        propertyId: property.id,
+        userId: user.uid,
+        startDate: new Date(selectedStartDate),
+        endDate: new Date(selectedEndDate),
+        status: 'pending',
+        ...formData,
+      };
+
+      const docRef = await addDoc(collection(db, 'bookings'), bookingData);
+      console.log('予約が作成されました。ID:', docRef.id);
+      alert('予約が完了しました。');
+      setIsBookingDialogOpen(false);
+      setSelectedStartDate('');
+      setSelectedEndDate('');
+    } catch (error) {
+      console.error('予約の作成中にエラーが発生しました:', error);
+      alert('予約の作成中にエラーが発生しました。もう一度お試しください。');
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -360,6 +577,8 @@ export default function PropertyDetail() {
       </Layout>
     );
   }
+
+  console.log('Current calendarEvents:', calendarEvents);
 
   return (
     <Layout>
@@ -425,7 +644,7 @@ export default function PropertyDetail() {
                           />
                         ) : (
                           <div className="w-[100px] h-[100px] bg-gray-200 flex items-center justify-center mr-2">
-                            <Typography>無効なURL</Typography>
+                            <Typography>無効URL</Typography>
                           </div>
                         )}
                         <IconButton onClick={() => handleRemoveImage(index)}>
@@ -689,7 +908,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="maxGuests"
-                      label="���大宿泊人数"
+                      label="大宿泊人数"
                       type="number"
                       value={editedProperty?.maxGuests || ''}
                       onChange={handleInputChange}
@@ -877,7 +1096,7 @@ export default function PropertyDetail() {
                             <li key={index}>{spot}</li>
                           ))
                         ) : (
-                          <li>近隣の���スポット情報はありません</li>
+                          <li>近隣の観光スポット情報はありません</li>
                         )}
                       </ul>
                     </Paper>
@@ -893,7 +1112,7 @@ export default function PropertyDetail() {
                             <li key={index}>{item}</li>
                           ))
                         ) : (
-                          <li>主な設備・家具情報はありません</li>
+                          <li>主設備・家具情報はありません</li>
                         )}
                       </ul>
                     </Paper>
@@ -905,7 +1124,7 @@ export default function PropertyDetail() {
 
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約可能期間
+              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約能期間
             </Typography>
             {isEditing ? (
               <>
@@ -970,7 +1189,7 @@ export default function PropertyDetail() {
                 <TextField
                   fullWidth
                   name="latitude"
-                  label="緯度"
+                  label="度"
                   type="number"
                   value={editedProperty?.latitude || ''}
                   onChange={handleInputChange}
@@ -1013,6 +1232,83 @@ export default function PropertyDetail() {
               />
             </section>
           )}
+
+          <section className="mb-8">
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約カレンダー
+            </Typography>
+            {property?.icalUrl ? (
+              <Calendar 
+                events={calendarEvents} 
+                currentMonth={currentMonth}
+                onMonthChange={handleMonthChange}
+                onDateClick={handleDateClick}
+              />
+            ) : (
+              <Typography>予約カレンダーは利用できません</Typography>
+            )}
+          </section>
+
+          <section className="mb-8">
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約
+            </Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel id="start-date-label">チェックイン日</InputLabel>
+                  <Select
+                    labelId="start-date-label"
+                    value={selectedStartDate}
+                    onChange={handleStartDateChange}
+                  >
+                    {availableDates.map((date) => (
+                      <MenuItem key={date.toISOString()} value={date.toISOString()}>
+                        {date.toLocaleDateString('ja-JP')}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel id="end-date-label">チェックアウト日</InputLabel>
+                  <Select
+                    labelId="end-date-label"
+                    value={selectedEndDate}
+                    onChange={handleEndDateChange}
+                    disabled={!selectedStartDate}
+                  >
+                    {availableDates
+                      .filter((date) => new Date(date) > new Date(selectedStartDate))
+                      .map((date) => (
+                        <MenuItem key={date.toISOString()} value={date.toISOString()}>
+                          {date.toLocaleDateString('ja-JP')}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => setIsBookingDialogOpen(true)}
+                  disabled={!selectedStartDate || !selectedEndDate}
+                >
+                  予約する
+                </Button>
+              </Grid>
+            </Grid>
+          </section>
+
+          <BookingDialog
+            open={isBookingDialogOpen}
+            onClose={() => setIsBookingDialogOpen(false)}
+            onSubmit={handleBookingSubmit}
+            startDate={selectedStartDate}
+            endDate={selectedEndDate}
+          />
 
           {/* 編集ボタンを一番下の真ん中に配置 */}
           {/* <div className="flex justify-center mt-8">
