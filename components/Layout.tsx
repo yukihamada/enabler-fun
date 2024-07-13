@@ -4,23 +4,16 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { ReactNode } from 'react';
 import { FaHome, FaBuilding, FaSignInAlt, FaUserPlus, FaUser, FaCog, FaSignOutAlt, FaInfoCircle, FaEnvelope } from 'react-icons/fa';
-import { createClientComponentClient, Session } from '@supabase/auth-helpers-nextjs';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { auth } from '../lib/firebase'; // Firebaseの設定をインポート
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [session, setSession] = useState<Session | null>(null);
-  const supabase = createClientComponentClient();
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-    };
-
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
     });
 
     // Difyチャットボットの設定を追加
@@ -48,12 +41,12 @@ export default function Layout({ children }: { children: ReactNode }) {
     return () => {
       document.body.removeChild(script);
       document.head.removeChild(style);
-      subscription.unsubscribe();
+      unsubscribe();
     };
-  }, [supabase.auth]);
+  }, []);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut(auth);
   };
 
   return (
@@ -77,7 +70,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               <Link href="/contact" className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">
                 <FaEnvelope className="mr-1" /> お問い合わせ
               </Link>
-              {session ? (
+              {user ? (
                 <>
                   <Link href="/profile" className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">
                     <FaUser className="mr-1" /> プロフィール
@@ -120,7 +113,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               <Link href="/contact" className="block py-2 text-gray-600 hover:text-blue-600 flex items-center">
                 <FaEnvelope className="mr-2" /> お問い合わせ
               </Link>
-              {session ? (
+              {user ? (
                 <>
                   <Link href="/profile" className="block py-2 text-gray-600 hover:text-blue-600 flex items-center">
                     <FaUser className="mr-2" /> プロフィール

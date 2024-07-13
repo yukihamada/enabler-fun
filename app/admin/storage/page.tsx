@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { ref, listAll, uploadBytes, StorageReference, getDownloadURL, deleteObject } from 'firebase/storage'
+import { ref, listAll, uploadBytes, StorageReference, getDownloadURL, deleteObject, getMetadata } from 'firebase/storage'
 import { storage } from '@/lib/firebase'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
@@ -11,6 +11,7 @@ import crypto from 'crypto'
 interface FileItem {
   ref: StorageReference;
   url: string;
+  createdAt: string;
 }
 
 export default function AdminStorage() {
@@ -35,15 +36,18 @@ export default function AdminStorage() {
       const res = await listAll(listRef);
       const fileItems = await Promise.all(res.items.map(async (item) => {
         const url = await getDownloadURL(item);
-        return { ref: item, url };
+        const metadata = await getMetadata(item);
+        return { ref: item, url, createdAt: metadata.timeCreated };
       }));
+      // 作成日時で降順にソート
+      fileItems.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       setFiles(fileItems);
     } catch (error) {
       console.error('ファイル一覧の取得に失敗しました:', error);
       if (error instanceof Error) {
         setError(`エラー: ${error.message}`);
       } else {
-        setError('不明なエ���ーが発生しました');
+        setError('不明なエラーが発生しました');
       }
     }
   }, []);

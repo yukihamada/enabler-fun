@@ -109,7 +109,7 @@ const Properties = () => {
         alert('物件情報が正常に追加されました。');
       } catch (error: unknown) {
         console.error('物件の追加中にエラーが発生しました:', error);
-        alert(`物件の追加中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
+        alert(`物件��追加中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
       } finally {
         setIsSubmitting(false);
       }
@@ -156,7 +156,7 @@ const Properties = () => {
 
   return (
     <div className="admin-container">
-      <Header />
+      <Header isLoggedIn={true} onLogout={() => {/* ログアウト処理 */}} />
       <AdminLayout>
         <Paper elevation={3} style={{ padding: '2rem', margin: '2rem 0', backgroundColor: '#f5f5f5' }}>
           <Typography variant="h4" gutterBottom style={{ color: '#333', borderBottom: '2px solid #1976d2', paddingBottom: '10px' }}>物件情報管理</Typography>

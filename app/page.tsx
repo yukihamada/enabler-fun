@@ -8,6 +8,8 @@ import Layout from '../components/Layout'; // Layout component imported
 import { FaSearch, FaHome, FaChartLine, FaBriefcase, FaUsers, FaLaptop, FaPaintBrush, FaHandsHelping } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 const images = [
   'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fd46e0678579e6790a7f86931b0fa1478.webp?alt=media&token=dbe025fd-1004-4637-bc06-a3f3c7031d7d',
@@ -21,11 +23,20 @@ const images = [
   'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fdec69e9042e4667e61dd537ab953ccdf.webp?alt=media&token=d0855b16-6cfc-4a76-9bd0-f7bafc952e7b'
 ];
 
+interface Property {
+  id: string;
+  title: string;
+  address: string;
+  price: number;
+  imageUrls: string[] | string;
+  description: string;
+}
 
 export default function Home() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('all');
   const [showNewsletter, setShowNewsletter] = useState(false);
+  const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -33,6 +44,28 @@ export default function Home() {
     }, 5000);
 
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const fetchFeaturedProperties = async () => {
+      try {
+        const propertiesCollection = collection(db, 'properties');
+        const propertiesQuery = query(propertiesCollection, limit(20)); // 20件取得して、その中からランダムに6件選ぶ
+        const propertiesSnapshot = await getDocs(propertiesQuery);
+        const propertiesList = propertiesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Property));
+        
+        // ランダムに6件選択
+        const shuffled = propertiesList.sort(() => 0.5 - Math.random());
+        setFeaturedProperties(shuffled.slice(0, 6));
+      } catch (error) {
+        console.error('物件の取得に失敗しました:', error);
+      }
+    };
+
+    fetchFeaturedProperties();
   }, []);
 
   const filterProperties = (category: string) => {
@@ -78,59 +111,25 @@ export default function Home() {
           <section className="py-16 px-4">
             <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">注目の物件</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300">
-                <Image src="/images/property1.jpg" alt="モダンアパートメント" width={600} height={400} className="w-full h-64 object-cover" />
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold mb-4">モダンアパートメト - 渋谷区</h3>
-                  <p className="mb-4">都心の便利な立地に位置する、スタイリッシュな1LDK。最新のスマートホーム機能を完備。</p>
-                  <ul className="list-disc list-inside mb-4">
-                    <li>スマートロック搭載</li>
-                    <li>高速Wi-Fi完備</li>
-                    <li>24時間セキュリティ</li>
-                  </ul>
-                  <Link href="/properties/modern-apartment" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300 inline-block">
-                    詳細を見る
-                  </Link>
+              {featuredProperties.map((property) => (
+                <div key={property.id} className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300">
+                  <Image 
+                    src={Array.isArray(property.imageUrls) ? property.imageUrls[0] : property.imageUrls} 
+                    alt={property.title} 
+                    width={600} 
+                    height={400} 
+                    className="w-full h-64 object-cover" 
+                  />
+                  <div className="p-6">
+                    <h3 className="text-2xl font-semibold mb-4">{property.title}</h3>
+                    <p className="mb-4">{property.address}</p>
+                    <p className="mb-4 line-clamp-3">{property.description}</p>
+                    <Link href={`/properties/${property.id}`} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300 inline-block">
+                      詳細を見る
+                    </Link>
+                  </div>
                 </div>
-              </div>
-
-              <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300">
-                <Image src="/images/property2.jpg" alt="伝統的な町家" width={600} height={400} className="w-full h-64 object-cover" />
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold mb-4">伝統的な町家 - 京都市</h3>
-                  <p className="mb-4">京都の風情を感じられる、改装済みの町家。現代的な設備と伝統的な雰囲気が融合。</p>
-                  <ul className="list-disc list-inside mb-4">
-                    <li>庭園付</li>
-                    <li>茶室完備</li>
-                    <li>観光名所へのアクセス良好</li>
-                  </ul>
-                  <Link href="/properties/kyoto-townhouse" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300 inline-block">
-                    詳細を見る
-                  </Link>
-                </div>
-              </div>
-
-              <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300">
-                <Image src={images[3]} alt="京都の町屋" width={600} height={400} className="w-full h-64 object-cover" />
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold mb-4">京都の伝統的な町屋</h3>
-                  <p className="mb-4">京都の歴史と文化を体験できる、趣のある町屋。現代的な設備と伝統的な雰囲気が融合。</p>
-                  <Link href="/properties/kyoto-machiya" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300 inline-block">
-                    詳細を見る
-                  </Link>
-                </div>
-              </div>
-
-              <div className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300">
-                <Image src={images[4]} alt="弟子屈の家" width={600} height={400} className="w-full h-64 object-cover" />
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold mb-4">弟子屈の自然に囲まれた家</h3>
-                  <p className="mb-4">北海道の大自然を満喫できる、静かでゆったりとした滞在が可能な一軒家。</p>
-                  <Link href="/properties/teshikaga-house" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300 inline-block">
-                    詳細を見る
-                  </Link>
-                </div>
-              </div>
+              ))}
             </div>
             <div className="text-center mt-8">
               <Link href="/properties" className="bg-blue-600 text-white px-6 py-3 rounded-full text-lg hover:bg-blue-700 transition duration-300">

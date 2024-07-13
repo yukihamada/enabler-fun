@@ -1,0 +1,69 @@
+curl -X PUT "http://localhost:3001/api/properties/VA6yl9e8Z5yhJQ2nGs8i" \
+-H "Content-Type: application/json" \
+-d '{
+  "title": "【連泊割 最大50%OFF】サウナ＆水風呂｜カラオケ｜BBQ｜オーシャンビュー「ホワイトハウス熱海」",
+  "price": 60000,
+  "bedrooms": 2,
+  "bathrooms": 1,
+  "area": 100,
+  "address": "静岡県熱海市",
+  "priceUnit": "泊",
+  "ownershipType": "一棟貸し",
+  "description": "2023年1月リニューアルOPEN！熱海市の絶景オーシャンビュー豪華デザイナーズ別荘一棟貸しのプライベートヴィラ。本格フィンランド式ドライサウナ「ホワイトサウナ」を完備。夜は満天の星空の下、大自然を満喫しながら、一番大切な人や仲間と一緒に癒しのお時間をお過ごしいただけます。お部屋のインテリアは白ベースに統一し、全面ガラス張りで相模湾が一望できる絶景のオーシャンビューをお楽しみください！",
+  "amenities": [
+    "本格フィンランド式ドライサウナ",
+    "水風呂",
+    "BBQ設備",
+    "カラオケDAM設備",
+    "無料Wi-Fi",
+    "プロジェクター",
+    "PS5",
+    "Netflix",
+    "エアコン",
+    "IHキッチン",
+    "洗濯乾燥機",
+    "ミニバー"
+  ],
+  "surroundings": "熱海の中心地に位置し、周辺には多くの観光スポットがあります。",
+  "nearbyStations": [
+    "熱海駅からタクシーで10分",
+    "来宮駅からタクシーで10分"
+  ],
+  "maxGuests": 6,
+  "smokingAllowed": false,
+  "petsAllowed": false,
+  "wifiInfo": "高速Wi-Fi完備、接続情報は室内に掲示",
+  "cleaningFee": 0,
+  "parking": "敷地内に1~2台無料駐車可能（横幅3M×奥行3M）",
+  "cancellationPolicy": "チェックイン7日前までキャンセル無料、6-3日前は50%、それ以降は全額のキャンセル料",
+  "nearbyAttractions": [
+    "MOA美術館",
+    "熱海梅園",
+    "熱海サンビーチ",
+    "熱海親水公園",
+    "來宮神社"
+  ],
+  "furnishings": [
+    "クイーンベッド2台",
+    "シングルベッド2台",
+    "ソファ",
+    "ダイニングテーブル",
+    "食器類",
+    "調理器具一式"
+  ],
+  "availableFrom": "2023-07-01",
+  "availableTo": "2024-12-31",
+  "specialOffers": [
+    "連泊割で基本料金最大50%OFF",
+    "各種ソフトドリンク無料"
+  ],
+  "nearbyFacilities": [
+    { "name": "コンビニ", "distance": 1.0 },
+    { "name": "スーパー", "distance": 2.0 },
+    { "name": "病院", "distance": 3.0 }
+  ],
+  "latitude": 35.0939,
+  "longitude": 139.0742,
+  "checkInTime": "16:00",
+  "checkOutTime": "11:00"
+}'

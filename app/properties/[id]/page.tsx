@@ -2,18 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
-import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize } from '@mui/material';
+import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs, query, where } from 'firebase/firestore';
+import { db, auth } from '../../../lib/firebase';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize, Fab } from '@mui/material';
 import Image from 'next/image';
 import Layout from '../../../components/Layout';
 import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshirt, FaSnowman, FaSubway, FaShoppingCart, FaTree, FaSchool, FaCocktail, FaSpa, FaCalendarAlt, FaMoneyBillWave, FaInfoCircle, FaMapMarkerAlt, FaClipboardList, FaUserFriends, FaSmoking, FaPaw, FaParking, FaFileContract, FaMapMarkedAlt, FaTools } from 'react-icons/fa';
 import { MdEdit as EditIcon, MdSave as SaveIcon, MdCancel as CancelIcon } from 'react-icons/md';
-import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import { Timestamp } from 'firebase/firestore';
-import dynamic from 'next/dynamic';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../../lib/firebase';
+import Script from 'next/script';
+import MapComponent from '../../../components/MapComponent';
 
 interface NearbyFacility {
   type: string;
@@ -84,11 +85,6 @@ const renderValue = (value: any): string => {
   return String(value);
 };
 
-const MapComponent = dynamic(() => import('../../../components/MapComponent'), {
-  ssr: false,
-  loading: () => <p>地図を読み込み中...</p>
-});
-
 export default function PropertyDetail() {
   const params = useParams();
   const id = params.id as string;
@@ -99,6 +95,11 @@ export default function PropertyDetail() {
   const [isRealTimeUpdating, setIsRealTimeUpdating] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [user, userLoading, userError] = useAuthState(auth);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminUsers, setAdminUsers] = useState<string[]>([]);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -142,7 +143,7 @@ export default function PropertyDetail() {
           setProperty(propertyData);
           setEditedProperty(propertyData);
         } else {
-          console.log('物が見つかりません');
+          console.log('物がつかりません');
         }
       } catch (error) {
         console.error('物件データの取得中にエラーが発生しました:', error);
@@ -173,6 +174,31 @@ export default function PropertyDetail() {
       }
     };
   }, [id, isEditing]);
+
+  useEffect(() => {
+    const fetchAdminUsers = async () => {
+      const adminUsersCollection = collection(db, 'adminUsers');
+      const adminUsersSnapshot = await getDocs(adminUsersCollection);
+      const adminUsersList = adminUsersSnapshot.docs.map(doc => doc.data().email);
+      setAdminUsers(adminUsersList);
+    };
+
+    const checkAdminStatus = async () => {
+      if (user && user.email) {
+        const adminUsersCollection = collection(db, 'adminUsers');
+        const q = query(adminUsersCollection, where("email", "==", user.email));
+        const querySnapshot = await getDocs(q);
+        const isAdminUser = !querySnapshot.empty;
+        setIsAdmin(isAdminUser);
+
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    fetchAdminUsers();
+    checkAdminStatus();
+  }, [user, adminUsers]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -211,7 +237,7 @@ export default function PropertyDetail() {
       setIsEditing(false);
       setIsRealTimeUpdating(false);
     } catch (error) {
-      console.error('物件の更新中にエラーが発生した:', error);
+      console.error('物件の更新中エラーが発生した:', error);
     }
   };
 
@@ -286,13 +312,19 @@ export default function PropertyDetail() {
       try {
         const snapshot = await uploadBytes(storageRef, file);
         const downloadURL = await getDownloadURL(snapshot.ref);
-        setEditedProperty(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            imageUrls: [...(prev.imageUrls || []), downloadURL]
-          };
-        });
+        
+        // URLが有効であることを確認
+        if (downloadURL && (downloadURL.startsWith('http://') || downloadURL.startsWith('https://'))) {
+          setEditedProperty(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              imageUrls: [...(prev.imageUrls || []), downloadURL]
+            };
+          });
+        } else {
+          console.error('Invalid image URL:', downloadURL);
+        }
         setUploadedFile(null);
       } catch (error) {
         console.error('画像のアップロード中にエラーが発生しました:', error);
@@ -331,8 +363,50 @@ export default function PropertyDetail() {
 
   return (
     <Layout>
+      <Script
+        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+        onLoad={() => setScriptLoaded(true)}
+      />
       <div className="bg-gray-100 min-h-screen relative">
         <Container maxWidth="lg" className="py-16">
+          {/* 編集ボタンを右上に固定 */}
+          {isAdmin && (
+            <div style={{
+              position: 'fixed',
+              top: '20px',
+              right: '20px',
+              zIndex: 1000
+            }}>
+              {isEditing ? (
+                <>
+                  <Fab
+                    color="primary"
+                    aria-label="save"
+                    onClick={handleSave}
+                    style={{ marginRight: '10px' }}
+                  >
+                    <SaveIcon />
+                  </Fab>
+                  <Fab
+                    color="secondary"
+                    aria-label="cancel"
+                    onClick={handleCancel}
+                  >
+                    <CancelIcon />
+                  </Fab>
+                </>
+              ) : (
+                <Fab
+                  color="primary"
+                  aria-label="edit"
+                  onClick={handleEdit}
+                >
+                  <EditIcon />
+                </Fab>
+              )}
+            </div>
+          )}
+
           <Paper elevation={3} className="p-8 mb-8 bg-white shadow-xl">
             <Grid container spacing={4}>
               <Grid item xs={12} md={6}>
@@ -341,13 +415,19 @@ export default function PropertyDetail() {
                     <Typography variant="subtitle1" className="mb-2">画像</Typography>
                     {Array.isArray(editedProperty?.imageUrls) && editedProperty.imageUrls.map((url, index) => (
                       <div key={index} className="flex items-center mb-2">
-                        <Image 
-                          src={url}
-                          alt={`画像 ${index + 1}`}
-                          width={100}
-                          height={100}
-                          className="mr-2"
-                        />
+                        {url && (url.startsWith('http://') || url.startsWith('https://')) ? (
+                          <Image 
+                            src={url}
+                            alt={`画像 ${index + 1}`}
+                            width={100}
+                            height={100}
+                            className="mr-2"
+                          />
+                        ) : (
+                          <div className="w-[100px] h-[100px] bg-gray-200 flex items-center justify-center mr-2">
+                            <Typography>無効なURL</Typography>
+                          </div>
+                        )}
                         <IconButton onClick={() => handleRemoveImage(index)}>
                           <CancelIcon />
                         </IconButton>
@@ -377,17 +457,23 @@ export default function PropertyDetail() {
                   <div className="grid grid-cols-2 gap-4">
                     {property.imageUrls && property.imageUrls.length > 0 ? (
                       property.imageUrls.map((url, index) => (
-                        <Image 
-                          key={index}
-                          src={url || '/images/default-property.jpg'} 
-                          alt={`${property.title} - 画像 ${index + 1}`}
-                          width={300}
-                          height={200}
-                          className="w-full h-auto rounded-lg shadow-lg"
-                        />
+                        url && (url.startsWith('http://') || url.startsWith('https://')) ? (
+                          <Image 
+                            key={index}
+                            src={url} 
+                            alt={`${property.title} - 画像 ${index + 1}`}
+                            width={300}
+                            height={200}
+                            className="w-full h-auto rounded-lg shadow-lg"
+                          />
+                        ) : (
+                          <div key={index} className="w-full h-[200px] bg-gray-200 flex items-center justify-center rounded-lg shadow-lg">
+                            <Typography>無効なURL</Typography>
+                          </div>
+                        )
                       ))
                     ) : (
-                      <Typography>画像がありまん</Typography>
+                      <Typography>画像がありません</Typography>
                     )}
                   </div>
                 )}
@@ -559,28 +645,34 @@ export default function PropertyDetail() {
               />
             ) : (
               <Grid container spacing={2}>
-                {Object.entries(property.nearbyFacilities?.reduce((acc: Record<string, NearbyFacility[]>, facility) => {
-                  if (!acc[facility.type]) {
-                    acc[facility.type] = [];
-                  }
-                  acc[facility.type].push(facility);
-                  return acc;
-                }, {}) || {}).map(([type, facilities]) => (
-                  <Grid item xs={12} sm={6} md={4} key={type}>
-                    <Paper className="p-4 bg-white shadow-md">
-                      <Typography variant="h6" className="mb-2 flex items-center text-indigo-700">
-                        {type}
-                      </Typography>
-                      <ul className="list-disc pl-5 text-gray-700">
-                        {facilities.map((f, index) => (
-                          <li key={index}>
-                            {f.name}{f.distance ? ` (${f.distance}km)` : ''}
-                          </li>
-                        ))}
-                      </ul>
-                    </Paper>
+                {Array.isArray(property.nearbyFacilities) && property.nearbyFacilities.length > 0 ? (
+                  Object.entries(property.nearbyFacilities.reduce((acc: Record<string, NearbyFacility[]>, facility) => {
+                    if (!acc[facility.type]) {
+                      acc[facility.type] = [];
+                    }
+                    acc[facility.type].push(facility);
+                    return acc;
+                  }, {})).map(([type, facilities]) => (
+                    <Grid item xs={12} sm={6} md={4} key={type}>
+                      <Paper className="p-4 bg-white shadow-md">
+                        <Typography variant="h6" className="mb-2 flex items-center text-indigo-700">
+                          {type}
+                        </Typography>
+                        <ul className="list-disc pl-5 text-gray-700">
+                          {facilities.map((f, index) => (
+                            <li key={index}>
+                              {f.name}{f.distance ? ` (${f.distance}km)` : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      </Paper>
+                    </Grid>
+                  ))
+                ) : (
+                  <Grid item xs={12}>
+                    <Typography>周辺施設の情はありせん。</Typography>
                   </Grid>
-                ))}
+                )}
               </Grid>
             )}
           </section>
@@ -597,7 +689,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="maxGuests"
-                      label="最大宿泊人数"
+                      label="���大宿泊人数"
                       type="number"
                       value={editedProperty?.maxGuests || ''}
                       onChange={handleInputChange}
@@ -785,7 +877,7 @@ export default function PropertyDetail() {
                             <li key={index}>{spot}</li>
                           ))
                         ) : (
-                          <li>近隣の観光スポット情報はありません</li>
+                          <li>近隣の���スポット情報はありません</li>
                         )}
                       </ul>
                     </Paper>
@@ -813,7 +905,7 @@ export default function PropertyDetail() {
 
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予可能期間
+              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約可能期間
             </Typography>
             {isEditing ? (
               <>
@@ -895,7 +987,7 @@ export default function PropertyDetail() {
                 />
               </>
             ) : (
-              property.latitude && property.longitude ? (
+              property.latitude && property.longitude && scriptLoaded ? (
                 <MapComponent 
                   lat={property.latitude} 
                   lng={property.longitude} 
@@ -923,7 +1015,7 @@ export default function PropertyDetail() {
           )}
 
           {/* 編集ボタンを一番下の真ん中に配置 */}
-          <div className="flex justify-center mt-8">
+          {/* <div className="flex justify-center mt-8">
             {isEditing ? (
               <>
                 <Button
@@ -954,7 +1046,7 @@ export default function PropertyDetail() {
                 編集
               </Button>
             )}
-          </div>
+          </div> */}
         </Container>
       </div>
     </Layout>

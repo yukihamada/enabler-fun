@@ -13,7 +13,7 @@ export default function AboutPage() {
       <main className="bg-white text-gray-900">
         <section className="relative h-screen flex items-center justify-center">
           <Image
-            src="/images/hero-property.jpg"
+            src="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2F8b049917f6f69cf2ebf10f32dfbafe75.JPG?alt=media&token=8b5c109c-f24c-40de-bdd5-3fa12b6510e5"
             alt="モダンな宿泊施設"
             layout="fill"
             objectFit="cover"
@@ -47,22 +47,34 @@ export default function AboutPage() {
 
         <section className="py-20">
           <div className="container mx-auto px-4">
-            <h2 className="text-4xl font-bold mb-12 text-center">私たちの強み</h2>
+            <h2 className="text-4xl font-bold mb-12 text-center">サービス詳細</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
               <div className="text-center">
                 <FaHome className="text-6xl text-blue-600 mx-auto mb-4" />
                 <h3 className="text-2xl font-semibold mb-4">物件管理システム</h3>
-                <p className="text-lg">効率的な予約管理から収益分析まで、包括的な物件管理ソリューションを提供します。</p>
+                <ul className="text-left list-disc pl-5">
+                  <li>予約管理の自動化</li>
+                  <li>収益分析レポート</li>
+                  <li>清掃スケジュール最適化</li>
+                </ul>
               </div>
               <div className="text-center">
                 <FaLaptop className="text-6xl text-blue-600 mx-auto mb-4" />
                 <h3 className="text-2xl font-semibold mb-4">デジタル化支援</h3>
-                <p className="text-lg">最新のテクノロジーを活用し、宿泊施設の運営をスマート化。業務効率を大幅に向上させます。</p>
+                <ul className="text-left list-disc pl-5">
+                  <li>スマートロックの導入</li>
+                  <li>AIチャットボットの実装</li>
+                  <li>オンラインチェックインシステム</li>
+                </ul>
               </div>
               <div className="text-center">
                 <FaPaintBrush className="text-6xl text-blue-600 mx-auto mb-4" />
                 <h3 className="text-2xl font-semibold mb-4">空間デザイン</h3>
-                <p className="text-lg">魅力的で快適な宿泊空間を創出。宿泊者の満足度を高め、リピーター獲得につなげます。</p>
+                <ul className="text-left list-disc pl-5">
+                  <li>地域性を活かしたインテリアデザイン</li>
+                  <li>快適性と機能性の両立</li>
+                  <li>写真映えするスポットの創出</li>
+                </ul>
               </div>
             </div>
           </div>
