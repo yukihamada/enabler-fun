@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { auth } from '@/lib/firebase'; // Firebaseの認証をインポート
 import AdminLayout from '../layout';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -12,28 +13,46 @@ import '../admin.css';
 const Members = () => {
   const [members, setMembers] = useState<Array<{ id: string; [key: string]: any }>>([]);
   const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    const auth = getAuth();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
+        router.push('/login'); // ログインしていない場合はログインページにリダイレクト
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleLogout = () => {
+    auth.signOut().then(() => {
+      router.push('/login');
+    }).catch((error) => {
+      console.error('ログアウトエラー:', error);
+    });
+  };
+
+  useEffect(() => {
     const db = getFirestore();
 
     const fetchMembers = async () => {
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          try {
-            const querySnapshot = await getDocs(collection(db, 'users'));
-            const membersData = querySnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-            setMembers(membersData);
-          } catch (error) {
-            console.error("メンバーの取得中にエラーが発生しました:", error);
-          } finally {
-            setLoading(false);
-          }
-        }
-      });
+      try {
+        const querySnapshot = await getDocs(collection(db, 'users'));
+        const membersData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setMembers(membersData);
+      } catch (error) {
+        console.error("メンバーの取得中にエラーが発生しました:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchMembers();
@@ -41,8 +60,8 @@ const Members = () => {
 
   return (
     <div className="admin-container">
-      <Header />
-      <AdminLayout>
+      <Header isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+      <AdminLayout isLoggedIn={isLoggedIn} onLogout={handleLogout}>
         {loading ? <Loader /> : (
           <>
             <h1>Members</h1>

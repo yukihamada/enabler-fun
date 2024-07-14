@@ -5,11 +5,9 @@ import { ReactNode } from 'react';
 
 interface AdminLayoutProps {
   children: ReactNode;
-  isLoggedIn: boolean;
-  onLogout: () => void;
 }
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children, isLoggedIn, onLogout }) => {
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   return (
     <html lang="ja">
       <head />
@@ -17,5 +15,4 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, isLoggedIn, onLogou
     </html>
   )
 }
-
 export default AdminLayout;

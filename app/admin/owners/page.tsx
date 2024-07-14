@@ -22,6 +22,7 @@ const Owners = () => {
   const [newOwner, setNewOwner] = useState({ name: '', email: '' });
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
 
   useEffect(() => {
     fetchOwners();
@@ -81,10 +82,15 @@ const Owners = () => {
     setNewOwner({ ...newOwner, [id]: value });
   };
 
+  const handleLogout = () => {
+    // ログアウト処理をここに実装
+    setIsLoggedIn(false);
+  };
+
   return (
     <div className="admin-container">
-      <Header />
-      <AdminLayout>
+      <Header isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+      <AdminLayout isLoggedIn={isLoggedIn} onLogout={handleLogout}>
         <Typography variant="h4" component="h1" gutterBottom>
           <BusinessIcon sx={{ mr: 1 }} />
           オーナー管理
@@ -158,7 +164,7 @@ const Owners = () => {
               ))}
             </List>
           ) : (
-            <Typography>オーナーが登録されていません。</Typography>
+            <Typography>オーナーが登録��れていません。</Typography>
           )}
         </Paper>
       </AdminLayout>

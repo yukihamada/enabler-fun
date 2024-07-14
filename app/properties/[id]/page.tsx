@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs, query, where, addDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs, query, where, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize, Fab, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, Stepper, Step, StepLabel, Box } from '@mui/material';
+import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize, Fab, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, Stepper, Step, StepLabel, Box, DialogContentText } from '@mui/material';
 import Image from 'next/image';
 import Layout from '../../../components/Layout';
-import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshirt, FaSnowman, FaSubway, FaShoppingCart, FaTree, FaSchool, FaCocktail, FaSpa, FaCalendarAlt, FaMoneyBillWave, FaInfoCircle, FaMapMarkerAlt, FaClipboardList, FaUserFriends, FaSmoking, FaPaw, FaParking, FaFileContract, FaMapMarkedAlt, FaTools } from 'react-icons/fa';
+import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshirt, FaSnowman, FaSubway, FaShoppingCart, FaTree, FaSchool, FaCocktail, FaSpa, FaCalendarAlt, FaMoneyBillWave, FaInfoCircle, FaMapMarkerAlt, FaClipboardList, FaUserFriends, FaSmoking, FaPaw, FaParking, FaFileContract, FaMapMarkedAlt, FaTools, FaExclamationTriangle, FaLock, FaClipboard, FaTrash } from 'react-icons/fa';
 import { MdEdit as EditIcon, MdSave as SaveIcon, MdCancel as CancelIcon } from 'react-icons/md';
 import { Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -17,6 +17,7 @@ import Script from 'next/script';
 import MapComponent from '../../../components/MapComponent';
 import Calendar from '../../../components/Calendar';
 import { SelectChangeEvent } from '@mui/material/Select';
+import { getAuth } from 'firebase/auth';
 
 interface NearbyFacility {
   type: string;
@@ -88,20 +89,23 @@ const renderValue = (value: any): string => {
 };
 
 interface Booking {
+  id: string;
   propertyId: string;
   userId: string;
-  startDate: Date;
-  endDate: Date;
+  startDate: Timestamp;
+  endDate: Timestamp;
   status: 'pending' | 'confirmed' | 'cancelled';
-  cardNumber: string;
-  name: string;
-  phoneNumber: string;
+  guestName: string;
+  guestEmail: string;
 }
 
 interface BookingFormData {
-  cardNumber: string;
   name: string;
   phoneNumber: string;
+  email: string;
+  cardNumber: string;
+  cardExpiry: string;
+  cardCVC: string;
 }
 
 const BookingDialog: React.FC<{
@@ -113,9 +117,12 @@ const BookingDialog: React.FC<{
 }> = ({ open, onClose, onSubmit, startDate, endDate }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState<BookingFormData>({
-    cardNumber: '',
     name: '',
     phoneNumber: '',
+    email: '',
+    cardNumber: '',
+    cardExpiry: '',
+    cardCVC: '',
   });
 
   const handleNext = () => {
@@ -136,32 +143,28 @@ const BookingDialog: React.FC<{
   };
 
   const steps = [
-    { label: '日程確認', content: (
-      <Typography>
-        {startDate && endDate && 
-          `${new Date(startDate).toLocaleDateString('ja-JP')}から
-           ${new Date(endDate).toLocaleDateString('ja-JP')}まで予約しますか？`}
-      </Typography>
-    )},
-    { label: '支払い情報', content: (
-      <TextField
-        fullWidth
-        name="cardNumber"
-        label="クレジットカード番号"
-        value={formData.cardNumber}
-        onChange={handleInputChange}
-        margin="normal"
-      />
-    )},
     { label: '個人情報', content: (
-      <TextField
-        fullWidth
-        name="name"
-        label="お名前"
-        value={formData.name}
-        onChange={handleInputChange}
-        margin="normal"
-      />
+      <>
+        <TextField
+          fullWidth
+          name="name"
+          label="お名前"
+          value={formData.name}
+          onChange={handleInputChange}
+          margin="normal"
+          required
+        />
+        <TextField
+          fullWidth
+          name="email"
+          label="メールアドレス"
+          type="email"
+          value={formData.email}
+          onChange={handleInputChange}
+          margin="normal"
+          required
+        />
+      </>
     )},
     { label: '連絡先', content: (
       <TextField
@@ -171,7 +174,46 @@ const BookingDialog: React.FC<{
         value={formData.phoneNumber}
         onChange={handleInputChange}
         margin="normal"
+        required
       />
+    )},
+    { label: '日程確認', content: (
+      <Typography>
+        {startDate && endDate && 
+          `${new Date(startDate).toLocaleDateString('ja-JP')}から
+           ${new Date(endDate).toLocaleDateString('ja-JP')}まで予約します。`}
+      </Typography>
+    )},
+    { label: '支払い情報', content: (
+      <>
+        <TextField
+          fullWidth
+          name="cardNumber"
+          label="クレジットカード番号"
+          value={formData.cardNumber}
+          onChange={handleInputChange}
+          margin="normal"
+          required
+        />
+        <TextField
+          fullWidth
+          name="cardExpiry"
+          label="有効期限 (MM/YY)"
+          value={formData.cardExpiry}
+          onChange={handleInputChange}
+          margin="normal"
+          required
+        />
+        <TextField
+          fullWidth
+          name="cardCVC"
+          label="セキュリティコード (CVC)"
+          value={formData.cardCVC}
+          onChange={handleInputChange}
+          margin="normal"
+          required
+        />
+      </>
     )},
   ];
 
@@ -227,6 +269,11 @@ export default function PropertyDetail() {
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [selectedStartDate, setSelectedStartDate] = useState<string>('');
   const [selectedEndDate, setSelectedEndDate] = useState<string>('');
+  const [icalUrl, setIcalUrl] = useState('');
+  const [icalToken, setIcalToken] = useState('');
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<Booking | null>(null);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -387,7 +434,7 @@ export default function PropertyDetail() {
     try {
       const { id, ...updateData } = editedProperty;
       
-      // 保存前に配列プロ��ティを確認
+      // 保存前に配列プロパィを確認
       updateData.imageUrls = Array.isArray(updateData.imageUrls) ? updateData.imageUrls : [];
       updateData.nearbyAttractions = Array.isArray(updateData.nearbyAttractions) ? updateData.nearbyAttractions : [];
       updateData.furnishings = Array.isArray(updateData.furnishings) ? updateData.furnishings : [];
@@ -415,7 +462,7 @@ export default function PropertyDetail() {
     setEditedProperty(prev => {
       if (!prev) return null;
       if (name === 'availableFrom' || name === 'availableTo') {
-        // 日付入力場合、Firestore のタイムスンプ形式に変換
+        // 日付入力場合、Firestore のタイムスタンプ��式に変換
         const date = new Date(value);
         return { ...prev, [name]: Timestamp.fromDate(date) };
       }
@@ -535,12 +582,14 @@ export default function PropertyDetail() {
 
     try {
       const bookingData: Booking = {
+        id: doc(collection(db, 'bookings')).id,
         propertyId: property.id,
         userId: user.uid,
-        startDate: new Date(selectedStartDate),
-        endDate: new Date(selectedEndDate),
+        guestName: formData.name,
+        guestEmail: formData.email,
+        startDate: Timestamp.fromDate(new Date(selectedStartDate)),
+        endDate: Timestamp.fromDate(new Date(selectedEndDate)),
         status: 'pending',
-        ...formData,
       };
 
       const docRef = await addDoc(collection(db, 'bookings'), bookingData);
@@ -552,6 +601,70 @@ export default function PropertyDetail() {
     } catch (error) {
       console.error('予約の作成中にエラーが発生しました:', error);
       alert('予約の作成中にエラーが発生しました。もう一度お試しください。');
+    }
+  };
+
+  useEffect(() => {
+    const generateIcalToken = async () => {
+      if (property && isAdmin) {
+        const auth = getAuth();
+        const user = auth.currentUser;
+        if (user) {
+          const idToken = await user.getIdToken();
+          const tokenDoc = await getDoc(doc(db, 'icalTokens', property.id));
+          if (tokenDoc.exists()) {
+            setIcalToken(tokenDoc.data().token);
+          } else {
+            const newToken = Math.random().toString(36).substr(2, 10);
+            await setDoc(doc(db, 'icalTokens', property.id), { token: newToken });
+            setIcalToken(newToken);
+          }
+          setIcalUrl(`${window.location.origin}/api/bookings/ical/${property.id}?token=${icalToken}`);
+        }
+      }
+    };
+
+    generateIcalToken();
+  }, [property, isAdmin]);
+
+  const regenerateToken = async () => {
+    if (property && isAdmin) {
+      const newToken = Math.random().toString(36).substr(2, 10);
+      await setDoc(doc(db, 'icalTokens', property.id), { token: newToken });
+      setIcalToken(newToken);
+      setIcalUrl(`${window.location.origin}/api/bookings/ical/${property.id}?token=${newToken}`);
+    }
+  };
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (property && isAdmin) {
+        const bookingsRef = collection(db, 'bookings');
+        const q = query(bookingsRef, where('propertyId', '==', property.id));
+        const querySnapshot = await getDocs(q);
+        const fetchedBookings = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Booking[];
+        setBookings(fetchedBookings);
+      }
+    };
+
+    fetchBookings();
+  }, [property, isAdmin]);
+
+  const handleDeleteBooking = async () => {
+    if (!bookingToDelete) return;
+
+    try {
+      await deleteDoc(doc(db, 'bookings', bookingToDelete.id));
+      setBookings(bookings.filter(booking => booking.id !== bookingToDelete.id));
+      setDeleteDialogOpen(false);
+      setBookingToDelete(null);
+      alert('予約が削除されました。');
+    } catch (error) {
+      console.error('予約の削除中にエラーが発生しました:', error);
+      alert('予約の削除中にエラーが発生しました。もう一度お試しください。');
     }
   };
 
@@ -889,7 +1002,7 @@ export default function PropertyDetail() {
                   ))
                 ) : (
                   <Grid item xs={12}>
-                    <Typography>周辺施設の情はありせん。</Typography>
+                    <Typography>周辺施設の情報はありせん。</Typography>
                   </Grid>
                 )}
               </Grid>
@@ -1104,7 +1217,7 @@ export default function PropertyDetail() {
                   <Grid item xs={12} sm={6}>
                     <Paper className="p-4 bg-white shadow-md">
                       <Typography variant="subtitle1" className="font-semibold flex items-center">
-                        <FaTools className="mr-2 text-indigo-600" /> 主な設備・家具：
+                        <FaTools className="mr-2 text-indigo-600" /> 主設備・家具：
                       </Typography>
                       <ul className="list-disc pl-5">
                         {property.furnishings && property.furnishings.length > 0 ? (
@@ -1112,7 +1225,7 @@ export default function PropertyDetail() {
                             <li key={index}>{item}</li>
                           ))
                         ) : (
-                          <li>主設備・家具情報はありません</li>
+                          <li>主設備・家具報はありません</li>
                         )}
                       </ul>
                     </Paper>
@@ -1310,39 +1423,115 @@ export default function PropertyDetail() {
             endDate={selectedEndDate}
           />
 
-          {/* 編集ボタンを一番下の真ん中に配置 */}
-          {/* <div className="flex justify-center mt-8">
-            {isEditing ? (
-              <>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<SaveIcon />}
-                  onClick={handleSave}
-                  className="mr-2"
-                >
-                  保存
-                </Button>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  startIcon={<CancelIcon />}
-                  onClick={handleCancel}
-                >
-                  キャンセル
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<EditIcon />}
-                onClick={handleEdit}
-              >
-                編集
+          {isAdmin && (
+            <section className="mb-8 bg-gray-100 p-6 rounded-lg">
+              <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+                <FaLock className="mr-2 text-indigo-600" /> 管理者専用セクション
+              </Typography>
+
+              <Paper className="p-4 bg-white shadow-md mb-4">
+                <Typography variant="h5" className="mb-4 font-semibold">予約済みゲスト一覧</Typography>
+                {bookings.length > 0 ? (
+                  <ul className="divide-y divide-gray-200">
+                    {bookings.map((booking) => (
+                      <li key={booking.id} className="py-4 flex justify-between items-center">
+                        <div>
+                          <Typography variant="subtitle1" className="font-semibold">
+                            {booking.guestName} ({booking.guestEmail})
+                          </Typography>
+                          <Typography variant="body2" className="text-gray-600">
+                            {new Date(booking.startDate.seconds * 1000).toLocaleDateString('ja-JP')} から
+                            {new Date(booking.endDate.seconds * 1000).toLocaleDateString('ja-JP')} まで
+                          </Typography>
+                          <Chip
+                            label={booking.status}
+                            color={booking.status === 'confirmed' ? 'success' : 'warning'}
+                            size="small"
+                            className="mt-1"
+                          />
+                        </div>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          startIcon={<FaTrash />}
+                          onClick={() => {
+                            setBookingToDelete(booking);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          削除
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Typography>予約はありません。</Typography>
+                )}
+              </Paper>
+
+              <Paper className="p-4 bg-white shadow-md">
+                <Typography variant="h5" className="mb-2 font-semibold">iCal フィード</Typography>
+                <Typography variant="body1" className="mb-2">
+                  以下のURLを使用して、この物件の予約をカレンダーアプリケーションと同期できます：
+                </Typography>
+                <TextField
+                  fullWidth
+                  value={icalUrl}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  variant="outlined"
+                />
+                <div className="mt-2 flex space-x-2">
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<FaClipboard />}
+                    onClick={() => navigator.clipboard.writeText(icalUrl)}
+                  >
+                    URLをコピー
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={regenerateToken}
+                  >
+                    新しいトークンを生成
+                  </Button>
+                </div>
+                <Typography variant="body2" className="mt-4 text-red-600 flex items-center">
+                  <FaExclamationTriangle className="mr-2" />
+                  注意このURLには個人情報が含まれています。取り扱いには十分注意してください。
+                </Typography>
+              </Paper>
+            </section>
+          )}
+
+          {/* 予約削除確認ダイアログ */}
+          <Dialog
+            open={deleteDialogOpen}
+            onClose={() => setDeleteDialogOpen(false)}
+          >
+            <DialogTitle>予約削除の確認</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                以下の予約を削除してもよろしいですか？
+                <br />
+                ゲスト名: {bookingToDelete?.guestName}
+                <br />
+                期間: {bookingToDelete && `${new Date(bookingToDelete.startDate.seconds * 1000).toLocaleDateString('ja-JP')} から ${new Date(bookingToDelete.endDate.seconds * 1000).toLocaleDateString('ja-JP')}`}
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setDeleteDialogOpen(false)} color="primary">
+                キャンセル
               </Button>
-            )}
-          </div> */}
+              <Button onClick={handleDeleteBooking} color="error" variant="contained">
+                削除
+              </Button>
+            </DialogActions>
+          </Dialog>
+
         </Container>
       </div>
     </Layout>
