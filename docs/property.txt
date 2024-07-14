@@ -1,4 +1,4 @@
-curl -X PUT "http://localhost:3001/api/properties/VA6yl9e8Z5yhJQ2nGs8i" \
+curl -X PUT "http://enabler.fun/api/properties/VA6yl9e8Z5yhJQ2nGs8i" \
 -H "Content-Type: application/json" \
 -d '{
   "title": "【連泊割 最大50%OFF】サウナ＆水風呂｜カラオケ｜BBQ｜オーシャンビュー「ホワイトハウス熱海」",

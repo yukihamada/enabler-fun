@@ -51,6 +51,12 @@ export async function PUT(
     const propertyData = { ...updateData };
     delete propertyData.id;
 
+    // CORSヘッダーを設定
+    const response = NextResponse.next();
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
     await updateDoc(propertyDoc, {
       ...propertyData,
       updatedAt: serverTimestamp()
