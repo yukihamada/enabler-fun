@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '../../../../lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import ical from 'ical-generator';
 
 export async function GET(
@@ -12,42 +12,73 @@ export async function GET(
     return new Response('Property ID is required', { status: 400 });
   }
   const propertyId = searchParams.get('propertyId') || '';
+  const token = searchParams.get('token');
 
   try {
-    // Firestoreから予約データを取得
-    const bookingsRef = collection(db, 'bookings');
-    const q = query(bookingsRef, where("propertyId", "==", propertyId));
-    const querySnapshot = await getDocs(q);
+    // 物件ドキュメントからiCalURLを取得
+    const propertyRef = doc(db, 'properties', propertyId);
+    const propertyDoc = await getDoc(propertyRef);
 
-    // iCalデータを生成
-    const calendar = ical({ name: `予約 - 物件ID: ${propertyId}` });
+    if (!propertyDoc.exists()) {
+      return new Response('Property not found', { status: 404 });
+    }
 
-    querySnapshot.forEach((doc) => {
-      const booking = doc.data();
-      calendar.createEvent({
-        start: booking.startDate.toDate(),
-        end: booking.endDate.toDate(),
-        summary: `予約 - ${booking.name}`,
-        description: `予約者: ${booking.name}\n電話番号: ${booking.phoneNumber}`,
-        location: propertyId,
+    const propertyData = propertyDoc.data();
+    const icalUrl = propertyData.icalUrl;
+
+    if (!icalUrl) {
+      return new Response('iCal URL not found for this property', { status: 404 });
+    }
+
+    // トークンの検証
+    const tokenDoc = await getDoc(doc(db, 'icalTokens', propertyId));
+    const validToken = tokenDoc.exists() ? tokenDoc.data().token : null;
+
+    let icalData;
+
+    if (token === validToken) {
+      // トークンが正しい場合、Firebaseの予約状況を返す
+      const bookingsRef = collection(db, 'bookings');
+      const q = query(bookingsRef, where('propertyId', '==', propertyId));
+      const bookingsSnapshot = await getDocs(q);
+      
+      const calendar = ical({ name: 'Bookings' });
+      
+      bookingsSnapshot.forEach((doc) => {
+        const booking = doc.data();
+        calendar.createEvent({
+          start: booking.startDate.toDate(),
+          end: booking.endDate.toDate(),
+          summary: '予約あり',
+          description: `Guest: ${booking.guestName}`,
+        });
       });
-    });
-
-    // iCalデータを文字列として生成
-    const icalString = calendar.toString();
+      
+      icalData = calendar.toString();
+    } else {
+      // トークンがない場合、iCalURLの内容を取得して修正
+      const response = await fetch(icalUrl);
+      if (!response.ok) {
+        throw new Error('Failed to fetch iCal data');
+      }
+      icalData = await response.text();
+      
+      // SUMMARY:の部分を「予約あり」に変更
+      icalData = icalData.replace(/SUMMARY:.*$/gm, 'SUMMARY:予約あり');
+    }
 
     // レスポンスヘッダーを設定
     const headers = new Headers();
     headers.set('Content-Type', 'text/calendar');
     headers.set('Content-Disposition', `attachment; filename="bookings-${propertyId}.ics"`);
 
-    // iCalデータを返��
-    return new NextResponse(icalString, {
+    // iCalデータを返す
+    return new NextResponse(icalData, {
       status: 200,
       headers: headers,
     });
   } catch (error) {
-    console.error('iCalデータの生成中にエラーが発生しました:', error);
-    return NextResponse.json({ error: 'iCalデータの生成中にエラーが発生しました' }, { status: 500 });
+    console.error('iCalデータの取得中にエラーが発生しました:', error);
+    return NextResponse.json({ error: 'iCalデータの取得中にエラーが発生しました' }, { status: 500 });
   }
 }

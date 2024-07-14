@@ -66,6 +66,7 @@ body {
   .icon-wrapper {
     @apply mr-2 text-[rgb(var(--primary-color))];
   }
+
 }
 
 @layer utilities {
@@ -75,5 +76,9 @@ body {
 
   .bg-gradient-primary {
     @apply bg-gradient-to-r from-[rgb(var(--primary-color))] to-[rgb(var(--primary-dark))];
+  }
+
+  .fc-day.has-event {
+    background-color: #f0f0f0;
   }
 }

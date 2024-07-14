@@ -1,5 +1,9 @@
 {
   "projects": {
-    "default": "chef-career"
-  }
+    "default": "chef-career",
+    "staging": "enabler-396600"
+  },
+  "targets": {},
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
 }

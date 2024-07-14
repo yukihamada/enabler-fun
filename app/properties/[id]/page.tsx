@@ -19,6 +19,8 @@ import Calendar from '../../../components/Calendar';
 import { SelectChangeEvent } from '@mui/material/Select';
 import { getAuth } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
+import { loadStripe } from '@stripe/stripe-js';
 
 interface NearbyFacility {
   type: string;
@@ -254,6 +256,9 @@ const BookingDialog: React.FC<{
   );
 };
 
+// Stripeの公開キーを使用してStripeオブジェクトを初期化
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+
 export default function PropertyDetail() {
   const params = useParams();
   const id = params.id as string;
@@ -269,7 +274,7 @@ export default function PropertyDetail() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUsers, setAdminUsers] = useState<string[]>([]);
   const [debugInfo, setDebugInfo] = useState<string>('');
-  const [calendarEvents, setCalendarEvents] = useState<{ start: string; end: string }[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<{ start: Date; end: Date; title: string }[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
@@ -284,6 +289,8 @@ export default function PropertyDetail() {
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [icalData, setIcalData] = useState('');
+  const [parsedEvents, setParsedEvents] = useState<{ start: Date; end: Date; title: string }[]>([]);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -386,19 +393,69 @@ export default function PropertyDetail() {
 
   useEffect(() => {
     const fetchCalendarData = async () => {
-      if (property?.icalUrl) {
-        try {
-          const response = await fetch(`/api/fetch-ical?url=${encodeURIComponent(property.icalUrl)}`);
-          const data = await response.json();
-          console.log('Fetched calendar data:', data);
-          setCalendarEvents(data.events);
-        } catch (error) {
-          console.error('iCalデータの取得に失敗しました:', error);
-        }
+      try {
+        const response = await axios.get('/api/bookings/ical?propertyId=VA6yl9e8Z5yhJQ2nGs8i');
+        const icalData = response.data;
+        setIcalData(icalData);
+
+        const events = parseICalData(icalData);
+        setParsedEvents(events);
+        
+        setCalendarEvents(events);
+      } catch (error) {
+        console.error('iCalデータの取得に失敗しました:', error);
       }
     };
+
     fetchCalendarData();
-  }, [property?.icalUrl]);
+  }, []);
+
+  const parseICalData = (icalData: string) => {
+    const events: { start: Date; end: Date; title: string }[] = [];
+    const lines = icalData.split('\n');
+    let currentEvent: { start: Date | null; end: Date | null; title: string } | null = null;
+
+    for (const line of lines) {
+      if (line.startsWith('BEGIN:VEVENT')) {
+        currentEvent = { start: null, end: null, title: '予約あり' };
+      } else if (line.startsWith('END:VEVENT')) {
+        if (currentEvent && currentEvent.start && currentEvent.end) {
+          // チェックアウト日の前日を終了日とする
+          const endDate = new Date(currentEvent.end);
+          endDate.setDate(endDate.getDate() - 1);
+          events.push({
+            start: currentEvent.start,
+            end: endDate,
+            title: currentEvent.title
+          });
+        }
+        currentEvent = null;
+      } else if (currentEvent) {
+        if (line.startsWith('DTSTART:')) {
+          currentEvent.start = parseICalDate(line.substring(8));
+        } else if (line.startsWith('DTEND:')) {
+          currentEvent.end = parseICalDate(line.substring(6));
+        } else if (line.startsWith('SUMMARY:')) {
+          currentEvent.title = line.substring(8).trim();
+        }
+      }
+    }
+
+    return events;
+  };
+
+  const parseICalDate = (dateString: string): Date => {
+    // iCal日付形式: YYYYMMDDTHHMMSSZ
+    const year = parseInt(dateString.substr(0, 4), 10);
+    const month = parseInt(dateString.substr(4, 2), 10) - 1; // JavaScriptの月は0-11
+    const day = parseInt(dateString.substr(6, 2), 10);
+    const hour = parseInt(dateString.substr(9, 2), 10);
+    const minute = parseInt(dateString.substr(11, 2), 10);
+    const second = parseInt(dateString.substr(13, 2), 10);
+
+    return new Date(Date.UTC(year, month, day, hour, minute, second));
+  };
+
 
   useEffect(() => {
     const generateAvailableDates = () => {
@@ -453,7 +510,7 @@ export default function PropertyDetail() {
     try {
       const { id, ...updateData } = editedProperty;
       
-      // 保前に配列プロパティを確認
+      // 保前配列プロパテを確認
       updateData.imageUrls = Array.isArray(updateData.imageUrls) ? updateData.imageUrls : [];
       updateData.nearbyAttractions = Array.isArray(updateData.nearbyAttractions) ? updateData.nearbyAttractions : [];
       updateData.furnishings = Array.isArray(updateData.furnishings) ? updateData.furnishings : [];
@@ -585,12 +642,23 @@ export default function PropertyDetail() {
 
   const handleStartDateChange = (event: SelectChangeEvent<string>) => {
     const newStartDate = event.target.value;
-    setSelectedStartDate(newStartDate);
-    setSelectedEndDate(''); // チェックイン日が変更されたらチェックアウト日をリセット
+    if (availableDates.some(date => date.toISOString() === newStartDate)) {
+      setSelectedStartDate(newStartDate);
+      setSelectedEndDate(''); // チェックイン日が変更されたらチェックアウト日をリセット
+    } else {
+      console.error('選択された日付が利用可能な日付の範囲外す');
+      setSelectedStartDate('');
+    }
   };
 
   const handleEndDateChange = (event: SelectChangeEvent<string>) => {
-    setSelectedEndDate(event.target.value as string);
+    const newEndDate = event.target.value;
+    if (availableDates.some(date => date.toISOString() === newEndDate)) {
+      setSelectedEndDate(newEndDate);
+    } else {
+      console.error('選択された日付が利用可能な日付の範囲外です');
+      setSelectedEndDate('');
+    }
   };
 
   const handleBookingSubmit = async (formData: BookingFormData) => {
@@ -618,8 +686,8 @@ export default function PropertyDetail() {
       setSelectedStartDate('');
       setSelectedEndDate('');
     } catch (error) {
-      console.error('予約の作成中にエラーが発生しました:', error);
-      alert('予約の作成中にエラーが発���しました。もう一度お試しください。');
+      console.error('予約の作成中にエラが発生しました:', error);
+      alert('予約の成中にエラーがしました。もう一度お試しくだい。');
     }
   };
 
@@ -638,7 +706,7 @@ export default function PropertyDetail() {
             await setDoc(doc(db, 'icalTokens', property.id), { token: newToken });
             setIcalToken(newToken);
           }
-          setIcalUrl(`${window.location.origin}/api/bookings/ical/${property.id}?token=${icalToken}`);
+          setIcalUrl(`${window.location.origin}/api/bookings/ical?propertyId=${property.id}&token=${icalToken}`);
         }
       }
     };
@@ -651,7 +719,7 @@ export default function PropertyDetail() {
       const newToken = Math.random().toString(36).substr(2, 10);
       await setDoc(doc(db, 'icalTokens', property.id), { token: newToken });
       setIcalToken(newToken);
-      setIcalUrl(`${window.location.origin}/api/bookings/ical/${property.id}?token=${newToken}`);
+      setIcalUrl(`${window.location.origin}/api/bookings/ical?propertyId=${property.id}&token=${newToken}`);
     }
   };
 
@@ -673,13 +741,13 @@ export default function PropertyDetail() {
   }, [property, isAdmin]);
 
   const handleDeleteBooking = async (bookingId: string) => {
-    if (window.confirm('この予約を削除してもよろしいですか？')) {
+    if (window.confirm('この予約を削除してもよろしいすか？')) {
       try {
         await deleteDoc(doc(db, 'bookings', bookingId));
         setBookings(bookings.filter(booking => booking.id !== bookingId));
         alert('予約が正常に削除されました。');
       } catch (error) {
-        console.error('予約の削除中に���ラーが発生しました:', error);
+        console.error('約の削除中にラーが発生しました:', error);
         alert('予約の削除中にエラーが発生しました。');
       }
     }
@@ -716,14 +784,25 @@ export default function PropertyDetail() {
       });
 
       if (!response.ok) {
-        throw new Error('チェックアウトセッションの作成に失敗しました');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'チェックアウトセッションの作成に失敗しました');
       }
 
       const { sessionId } = await response.json();
-      router.push(`/checkout/${sessionId}`);
-    } catch (error) {
-      console.error('チェックアウトセッションの作成中にエラーが発生しま��た:', error);
-      alert('予約処理中にエラーが発生しました。もう一度お試しください。');
+      console.log('セッションID:', sessionId);
+      
+      // Stripeのチェックアウトページにリダイレクト
+      const stripe = await stripePromise;
+      const { error } = await stripe!.redirectToCheckout({ sessionId });
+      
+      if (error) {
+        console.error('Stripeチェックアウトエラー:', error);
+        alert('チェックアウトプロセス中にエラーが発生しました。もう一度お試しください。');
+      }
+    } catch (error: unknown) {
+      console.error('チェックアウトセッションの作成中にエラーが発生しました:', error);
+      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
+      alert(`予約処理中にエラーが発生しました: ${errorMessage}`);
     }
   };
 
@@ -788,8 +867,6 @@ export default function PropertyDetail() {
       </Layout>
     );
   }
-
-  console.log('Current calendarEvents:', calendarEvents);
 
   return (
     <Layout>
@@ -939,7 +1016,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="bathrooms"
-                      label="バスルーム数"
+                      label="バスルー数"
                       type="number"
                       value={editedProperty?.bathrooms || ''}
                       onChange={handleInputChange}
@@ -948,7 +1025,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="area"
-                      label="面積 (m²)"
+                      label="面積 (m)"
                       type="number"
                       value={editedProperty?.area || ''}
                       onChange={handleInputChange}
@@ -1027,7 +1104,7 @@ export default function PropertyDetail() {
               />
             ) : (
               <Grid container spacing={2}>
-                {Array.isArray(property.amenities) ? property.amenities.slice(0, 3).map((amenity, index) => (
+                {Array.isArray(property.amenities) ? property.amenities.slice(0, 100).map((amenity, index) => (
                   <Grid item key={index}>
                     <Chip label={amenity} className="bg-indigo-100 text-indigo-700" />
                   </Grid>
@@ -1065,14 +1142,14 @@ export default function PropertyDetail() {
             {isEditing ? (
               <div>
                 <Typography variant="subtitle1" className="mb-2">
-                  周辺施設（タイプ,名前,距離km）を入力してください。各施設を新しい行に入力します。
+                  周辺施設（タイプ,名前,距離km）を入力してください。各施設を新しい行に入力��ます。
                 </Typography>
                 <TextareaAutosize
                   minRows={6}
                   style={{ width: '100%', padding: '8px', fontFamily: 'inherit' }}
                   value={editedProperty?.nearbyFacilities?.map(f => `${f.type},${f.name},${f.distance || ''}`).join('\n') || ''}
                   onChange={(e) => handleNearbyFacilitiesChange(e.target.value)}
-                  placeholder="例:&#10;駅,東京駅,0.5&#10;コンビニ,セブンイレブン,0.2&#10;公園,上野公園,1.5"
+                  placeholder="例:&#10;駅,東京駅,0.5&#10;コビニ,セブンイレブン,0.2&#10;公園,上野公園,1.5"
                 />
                 <Typography variant="caption" className="mt-2 block text-gray-600">
                   注意: 距離は省略可能です。入力しない場合は空欄のままにしてください。
@@ -1380,7 +1457,7 @@ export default function PropertyDetail() {
               <Typography>
                 {property.availableFrom && property.availableTo
                   ? `${formatDate(property.availableFrom)} から ${formatDate(property.availableTo)} まで`
-                  : '予約能期間は設定されていません'}
+                  : '予約能期間は定されていません'}
               </Typography>
             )}
           </section>
@@ -1395,7 +1472,7 @@ export default function PropertyDetail() {
                 multiline
                 rows={4}
                 name="specialOffers"
-                label="特別ファー（1行に1つ）"
+                label="特別ファー（1行に1つ"
                 value={editedProperty?.specialOffers?.join('\n') || ''}
                 onChange={(e) => handleArrayInputChange('specialOffers', e.target.value.split('\n').filter(offer => offer.trim() !== ''))}
               />
@@ -1403,7 +1480,7 @@ export default function PropertyDetail() {
               <ul>
                 {property.specialOffers?.map((offer, index) => (
                   <li key={index}>{offer}</li>
-                )) || <li>現在、特別オファーはありません</li>}
+                )) || <li>現在、特別ファーはありません</li>}
               </ul>
             )}
           </section>
@@ -1465,70 +1542,82 @@ export default function PropertyDetail() {
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約カレンダー
             </Typography>
-            {property?.icalUrl ? (
-              <Calendar 
-                events={calendarEvents} 
-                currentMonth={currentMonth}
-                onMonthChange={handleMonthChange}
-                onDateClick={handleDateClick}
-              />
-            ) : (
-              <Typography>予約カレンダーは利用できません</Typography>
-            )}
+            <Calendar 
+              events={calendarEvents}
+              currentMonth={currentMonth}
+              onMonthChange={handleMonthChange}
+              onDateClick={handleDateClick}
+              selectedStartDate={selectedStartDate ? new Date(selectedStartDate) : null}
+              selectedEndDate={selectedEndDate ? new Date(selectedEndDate) : null}
+              unavailableDates={[]}
+              maxStayDays={30}
+            />
           </section>
 
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約
+              <FaGlobe className="mr-2 text-green-500" /> 予約リンク
             </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="start-date-label">チェックイン日</InputLabel>
-                  <Select
-                    labelId="start-date-label"
-                    value={selectedStartDate}
-                    onChange={handleStartDateChange}
-                  >
-                    {availableDates.map((date) => (
-                      <MenuItem key={date.toISOString()} value={date.toISOString()}>
-                        {date.toLocaleDateString('ja-JP')}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+            {isEditing ? (
+              <div>
+                <div className="flex items-center space-x-2 mb-4">
+                  <TextField
+                    fullWidth
+                    value={newBookingLink.url}
+                    onChange={handleBookingLinkChange}
+                    placeholder="予約サイトのURL"
+                    className="flex-grow"
+                  />
+                  <IconButton onClick={() => handleBookingLinkTypeChange('airbnb')} color={newBookingLink.type === 'airbnb' ? 'primary' : 'default'}>
+                    <FaAirbnb />
+                  </IconButton>
+                  <IconButton onClick={() => handleBookingLinkTypeChange('booking')} color={newBookingLink.type === 'booking' ? 'primary' : 'default'}>
+                    <FaBook />
+                  </IconButton>
+                  <IconButton onClick={() => handleBookingLinkTypeChange('other')} color={newBookingLink.type === 'other' ? 'primary' : 'default'}>
+                    <FaGlobe />
+                  </IconButton>
+                  <Button onClick={handleAddBookingLink} variant="contained" startIcon={<AddIcon />}>
+                    追加
+                  </Button>
+                </div>
+                <Grid container spacing={2}>
+                  {editedProperty?.bookingLinks?.map((link, index) => (
+                    <Grid item xs={12} sm={6} md={4} key={index}>
+                      <Paper className="p-4 flex justify-between items-center">
+                        <div className="flex items-center">
+                          {getBookingLinkIcon(link.type)}
+                          <Typography className="ml-2 truncate">{link.url}</Typography>
+                        </div>
+                        <IconButton onClick={() => handleRemoveBookingLink(index)} color="secondary">
+                          <DeleteIcon />
+                        </IconButton>
+                      </Paper>
+                    </Grid>
+                  ))}
+                </Grid>
+              </div>
+            ) : (
+              <Grid container spacing={2}>
+                {property.bookingLinks?.map((link, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block p-4 bg-white shadow-md rounded-lg hover:shadow-lg transition-shadow"
+                    >
+                      <div className="flex items-center">
+                        {getBookingLinkIcon(link.type)}
+                        <Typography className="ml-2 truncate">{link.url}</Typography>
+                      </div>
+                    </a>
+                  </Grid>
+                ))}
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="end-date-label">チェックアウト日</InputLabel>
-                  <Select
-                    labelId="end-date-label"
-                    value={selectedEndDate}
-                    onChange={handleEndDateChange}
-                    disabled={!selectedStartDate}
-                  >
-                    {availableDates
-                      .filter((date) => new Date(date) > new Date(selectedStartDate))
-                      .map((date) => (
-                        <MenuItem key={date.toISOString()} value={date.toISOString()}>
-                          {date.toLocaleDateString('ja-JP')}
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleBooking}
-                  disabled={!selectedStartDate || !selectedEndDate}
-                >
-                  予約する
-                </Button>
-              </Grid>
-            </Grid>
+            )}
           </section>
+
 
           {isAdmin && (
             <section className="mb-8 bg-gray-100 p-6 rounded-lg">
@@ -1602,69 +1691,6 @@ export default function PropertyDetail() {
             </section>
           )}
 
-          <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaGlobe className="mr-2 text-green-500" /> 予約リンク
-            </Typography>
-            {isEditing ? (
-              <div>
-                <div className="flex items-center space-x-2 mb-4">
-                  <TextField
-                    fullWidth
-                    value={newBookingLink.url}
-                    onChange={handleBookingLinkChange}
-                    placeholder="予約サイトのURL"
-                    className="flex-grow"
-                  />
-                  <IconButton onClick={() => handleBookingLinkTypeChange('airbnb')} color={newBookingLink.type === 'airbnb' ? 'primary' : 'default'}>
-                    <FaAirbnb />
-                  </IconButton>
-                  <IconButton onClick={() => handleBookingLinkTypeChange('booking')} color={newBookingLink.type === 'booking' ? 'primary' : 'default'}>
-                    <FaBook />
-                  </IconButton>
-                  <IconButton onClick={() => handleBookingLinkTypeChange('other')} color={newBookingLink.type === 'other' ? 'primary' : 'default'}>
-                    <FaGlobe />
-                  </IconButton>
-                  <Button onClick={handleAddBookingLink} variant="contained" startIcon={<AddIcon />}>
-                    追加
-                  </Button>
-                </div>
-                <Grid container spacing={2}>
-                  {editedProperty?.bookingLinks?.map((link, index) => (
-                    <Grid item xs={12} sm={6} md={4} key={index}>
-                      <Paper className="p-4 flex justify-between items-center">
-                        <div className="flex items-center">
-                          {getBookingLinkIcon(link.type)}
-                          <Typography className="ml-2 truncate">{link.url}</Typography>
-                        </div>
-                        <IconButton onClick={() => handleRemoveBookingLink(index)} color="secondary">
-                          <DeleteIcon />
-                        </IconButton>
-                      </Paper>
-                    </Grid>
-                  ))}
-                </Grid>
-              </div>
-            ) : (
-              <Grid container spacing={2}>
-                {property.bookingLinks?.map((link, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={index}>
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block p-4 bg-white shadow-md rounded-lg hover:shadow-lg transition-shadow"
-                    >
-                      <div className="flex items-center">
-                        {getBookingLinkIcon(link.type)}
-                        <Typography className="ml-2 truncate">{link.url}</Typography>
-                      </div>
-                    </a>
-                  </Grid>
-                ))}
-              </Grid>
-            )}
-          </section>
 
           {showBookingForm && (
             <Paper elevation={3} className="p-8 mb-8 bg-white shadow-xl">
@@ -1691,7 +1717,7 @@ export default function PropertyDetail() {
                 合計金額：¥{property.price ? (property.price * (new Date(selectedEndDate).getTime() - new Date(selectedStartDate).getTime()) / (1000 * 60 * 60 * 24)).toLocaleString() : '価格はお問い合わせください'}
               </Typography>
               <Button variant="contained" color="primary" onClick={handleSubmitBooking}>
-                予約を確定する
+                予する
               </Button>
             </Paper>
           )}
