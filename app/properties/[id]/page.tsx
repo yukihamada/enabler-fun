@@ -269,7 +269,7 @@ export default function PropertyDetail() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUsers, setAdminUsers] = useState<string[]>([]);
   const [debugInfo, setDebugInfo] = useState<string>('');
-  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [calendarEvents, setCalendarEvents] = useState<{ start: string; end: string }[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
@@ -281,6 +281,9 @@ export default function PropertyDetail() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const router = useRouter();
   const [newBookingLink, setNewBookingLink] = useState<BookingLink>({ url: '', type: 'other' });
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -390,7 +393,7 @@ export default function PropertyDetail() {
           console.log('Fetched calendar data:', data);
           setCalendarEvents(data.events);
         } catch (error) {
-          console.error('iCalデータの取得に失敗し���した:', error);
+          console.error('iCalデータの取得に失敗しました:', error);
         }
       }
     };
@@ -398,20 +401,29 @@ export default function PropertyDetail() {
   }, [property?.icalUrl]);
 
   useEffect(() => {
-    // 利用可能な日付を生成（例：今日から30日間）
     const generateAvailableDates = () => {
       const dates = [];
       const today = new Date();
-      for (let i = 0; i < 30; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-        dates.push(date);
+      const endDate = new Date(today);
+      endDate.setDate(today.getDate() + 365); // 1��間の日付を生成
+
+      for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const currentDate = new Date(d);
+        const isAvailable = !calendarEvents.some(event => {
+          const eventStart = new Date(event.start);
+          const eventEnd = new Date(event.end);
+          return currentDate >= eventStart && currentDate < eventEnd;
+        });
+
+        if (isAvailable) {
+          dates.push(new Date(currentDate));
+        }
       }
       setAvailableDates(dates);
     };
 
     generateAvailableDates();
-  }, []);
+  }, [calendarEvents]);
 
   const handleMonthChange = (newMonth: Date) => {
     setCurrentMonth(newMonth);
@@ -572,7 +584,9 @@ export default function PropertyDetail() {
   };
 
   const handleStartDateChange = (event: SelectChangeEvent<string>) => {
-    setSelectedStartDate(event.target.value as string);
+    const newStartDate = event.target.value;
+    setSelectedStartDate(newStartDate);
+    setSelectedEndDate(''); // チェックイン日が変更されたらチェックアウト日をリセット
   };
 
   const handleEndDateChange = (event: SelectChangeEvent<string>) => {
@@ -671,9 +685,17 @@ export default function PropertyDetail() {
     }
   };
 
-  const handleBooking = async () => {
+  const handleBooking = () => {
     if (!selectedStartDate || !selectedEndDate || !property) {
       alert('日付を選択してください。');
+      return;
+    }
+    setShowBookingForm(true);
+  };
+
+  const handleSubmitBooking = async () => {
+    if (!selectedStartDate || !selectedEndDate || !property || !guestName || !guestEmail) {
+      alert('すべての情報を入力してください。');
       return;
     }
 
@@ -688,8 +710,14 @@ export default function PropertyDetail() {
           startDate: selectedStartDate,
           endDate: selectedEndDate,
           price: property.price,
+          guestName,
+          guestEmail,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error('チェックアウトセッションの作成に失敗しました');
+      }
 
       const { sessionId } = await response.json();
       router.push(`/checkout/${sessionId}`);
@@ -809,8 +837,7 @@ export default function PropertyDetail() {
             </div>
           )}
 
-          {/* メイン情報セクション */}
-          <Paper elevation={3} className="p-8 mb-8 bg-white shadow-xl rounded-lg">
+          <Paper elevation={3} className="p-8 mb-8 bg-white shadow-xl">
             <Grid container spacing={4}>
               <Grid item xs={12} md={6}>
                 {isEditing ? (
@@ -985,537 +1012,522 @@ export default function PropertyDetail() {
             </Grid>
           </Paper>
           
-          {/* アメニティセクション */}
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaSnowflake className="mr-2 text-indigo-600" /> アメニティ
             </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
-              {isEditing ? (
-                <TextField
-                  fullWidth
-                  name="amenities"
-                  label="アメニティ（カンマ区切り）"
-                  value={Array.isArray(editedProperty?.amenities) ? editedProperty.amenities.join(', ') : ''}
-                  onChange={(e) => handleArrayInputChange('amenities', e.target.value.split(',').map(item => item.trim()))}
-                  className="mb-4"
-                />
-              ) : (
-                <Grid container spacing={2}>
-                  {Array.isArray(property.amenities) ? property.amenities.slice(0, 3).map((amenity, index) => (
-                    <Grid item key={index}>
-                      <Chip label={amenity} className="bg-indigo-100 text-indigo-700" />
-                    </Grid>
-                  )) : null}
-                </Grid>
-              )}
-            </Paper>
+            {isEditing ? (
+              <TextField
+                fullWidth
+                name="amenities"
+                label="アメニティ（カンマ区切り）"
+                value={Array.isArray(editedProperty?.amenities) ? editedProperty.amenities.join(', ') : ''}
+                onChange={(e) => handleArrayInputChange('amenities', e.target.value.split(',').map(item => item.trim()))}
+                className="mb-4"
+              />
+            ) : (
+              <Grid container spacing={2}>
+                {Array.isArray(property.amenities) ? property.amenities.slice(0, 3).map((amenity, index) => (
+                  <Grid item key={index}>
+                    <Chip label={amenity} className="bg-indigo-100 text-indigo-700" />
+                  </Grid>
+                )) : null}
+              </Grid>
+            )}
           </section>
 
-          {/* 周辺環境セクション */}
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaMapMarkerAlt className="mr-2 text-indigo-600" /> 周辺環境
             </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
-              {isEditing ? (
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  name="surroundings"
-                  label="周辺環境"
-                  value={editedProperty?.surroundings || ''}
-                  onChange={handleInputChange}
-                  className="mb-4"
-                />
-              ) : (
-                <Typography variant="body1" className="text-gray-700 leading-relaxed">
-                  {property.surroundings || '周辺環境の詳細は準備中です。'}
-                </Typography>
-              )}
-            </Paper>
+            {isEditing ? (
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                name="surroundings"
+                label="周辺環境"
+                value={editedProperty?.surroundings || ''}
+                onChange={handleInputChange}
+                className="mb-4"
+              />
+            ) : (
+              <Typography variant="body1" className="text-gray-700 leading-relaxed">
+                {property.surroundings || '周辺環境の詳細は準備中です。'}
+              </Typography>
+            )}
           </section>
 
-          {/* 周辺施設セクション */}
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaMapMarkerAlt className="mr-2 text-indigo-600" /> 周辺施設
             </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
-              {isEditing ? (
-                <div>
-                  <Typography variant="subtitle1" className="mb-2">
-                    周辺施設（タイプ,名前,距離km）を入力してください。各施設を新しい行に入力します。
-                  </Typography>
-                  <TextareaAutosize
-                    minRows={6}
-                    style={{ width: '100%', padding: '8px', fontFamily: 'inherit' }}
-                    value={editedProperty?.nearbyFacilities?.map(f => `${f.type},${f.name},${f.distance || ''}`).join('\n') || ''}
-                    onChange={(e) => handleNearbyFacilitiesChange(e.target.value)}
-                    placeholder="例:&#10;駅,東京駅,0.5&#10;コンビニ,セブンイレブン,0.2&#10;公園,上野公園,1.5"
-                  />
-                  <Typography variant="caption" className="mt-2 block text-gray-600">
-                    注意: 距離は省略可能です。入力しない場合は空欄のままにしてください。
-                  </Typography>
-                </div>
-              ) : (
-                <Grid container spacing={2}>
-                  {Array.isArray(property.nearbyFacilities) && property.nearbyFacilities.length > 0 ? (
-                    Object.entries(property.nearbyFacilities.reduce((acc: Record<string, NearbyFacility[]>, facility) => {
-                      if (!acc[facility.type]) {
-                        acc[facility.type] = [];
-                      }
-                      acc[facility.type].push(facility);
-                      return acc;
-                    }, {})).map(([type, facilities]) => (
-                      <Grid item xs={12} sm={6} md={4} key={type}>
-                        <Paper className="p-4 bg-white shadow-md">
-                          <Typography variant="h6" className="mb-2 flex items-center text-indigo-700">
-                            {type}
-                          </Typography>
-                          <ul className="list-disc pl-5 text-gray-700">
-                            {facilities.map((f, index) => (
-                              <li key={index}>
-                                {f.name}{f.distance ? ` (${f.distance}km)` : ''}
-                              </li>
-                            ))}
-                          </ul>
-                        </Paper>
-                      </Grid>
-                    ))
-                  ) : (
-                    <Grid item xs={12}>
-                      <Typography>周辺施設の情報はありせん。</Typography>
+            {isEditing ? (
+              <div>
+                <Typography variant="subtitle1" className="mb-2">
+                  周辺施設（タイプ,名前,距離km）を入力してください。各施設を新しい行に入力します。
+                </Typography>
+                <TextareaAutosize
+                  minRows={6}
+                  style={{ width: '100%', padding: '8px', fontFamily: 'inherit' }}
+                  value={editedProperty?.nearbyFacilities?.map(f => `${f.type},${f.name},${f.distance || ''}`).join('\n') || ''}
+                  onChange={(e) => handleNearbyFacilitiesChange(e.target.value)}
+                  placeholder="例:&#10;駅,東京駅,0.5&#10;コンビニ,セブンイレブン,0.2&#10;公園,上野公園,1.5"
+                />
+                <Typography variant="caption" className="mt-2 block text-gray-600">
+                  注意: 距離は省略可能です。入力しない場合は空欄のままにしてください。
+                </Typography>
+              </div>
+            ) : (
+              <Grid container spacing={2}>
+                {Array.isArray(property.nearbyFacilities) && property.nearbyFacilities.length > 0 ? (
+                  Object.entries(property.nearbyFacilities.reduce((acc: Record<string, NearbyFacility[]>, facility) => {
+                    if (!acc[facility.type]) {
+                      acc[facility.type] = [];
+                    }
+                    acc[facility.type].push(facility);
+                    return acc;
+                  }, {})).map(([type, facilities]) => (
+                    <Grid item xs={12} sm={6} md={4} key={type}>
+                      <Paper className="p-4 bg-white shadow-md">
+                        <Typography variant="h6" className="mb-2 flex items-center text-indigo-700">
+                          {type}
+                        </Typography>
+                        <ul className="list-disc pl-5 text-gray-700">
+                          {facilities.map((f, index) => (
+                            <li key={index}>
+                              {f.name}{f.distance ? ` (${f.distance}km)` : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      </Paper>
                     </Grid>
-                  )}
-                </Grid>
-              )}
-            </Paper>
+                  ))
+                ) : (
+                  <Grid item xs={12}>
+                    <Typography>周辺施設の情報はありせん。</Typography>
+                  </Grid>
+                )}
+              </Grid>
+            )}
           </section>
 
-          {/* 宿泊詳細セクション */}
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaInfoCircle className="mr-2 text-indigo-600" /> 宿泊詳細
             </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
-              <Grid container spacing={3}>
-                {isEditing ? (
-                  <>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <TextField
-                        fullWidth
-                        name="maxGuests"
-                        label="大宿泊人数"
-                        type="number"
-                        value={editedProperty?.maxGuests || ''}
-                        onChange={handleInputChange}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={editedProperty?.smokingAllowed || false}
-                            onChange={(e) => handleInputChange({
-                              target: { name: 'smokingAllowed', value: e.target.checked }
-                            })}
-                          />
-                        }
-                        label="喫煙可"
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={editedProperty?.petsAllowed || false}
-                            onChange={(e) => handleInputChange({
-                              target: { name: 'petsAllowed', value: e.target.checked }
-                            })}
-                          />
-                        }
-                        label="ペット可"
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <TextField
-                        fullWidth
-                        name="wifiInfo"
-                        label="Wi-Fi情報"
-                        value={editedProperty?.wifiInfo || ''}
-                        onChange={handleInputChange}
-                      />
-                    </Grid>
-                  </>
-                ) : (
-                  <>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Paper className="info-card">
-                        <Typography className="info-card-title">
-                          <span className="icon-wrapper">
-                            <FaUserFriends />
-                          </span>
-                          最大宿泊人数
-                        </Typography>
-                        <Typography className="info-card-value">{property.maxGuests}名</Typography>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Paper className="info-card">
-                        <Typography className="info-card-title">
-                          <span className="icon-wrapper">
-                            <FaSmoking />
-                          </span>
-                          喫煙
-                        </Typography>
-                        <Typography className="info-card-value">{property.smokingAllowed ? '可' : '不可'}</Typography>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Paper className="info-card">
-                        <Typography className="info-card-title">
-                          <span className="icon-wrapper">
-                            <FaPaw />
-                          </span>
-                          ペット
-                        </Typography>
-                        <Typography className="info-card-value">{property.petsAllowed ? '可' : '不可'}</Typography>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Paper className="info-card">
-                        <Typography className="info-card-title">
-                          <span className="icon-wrapper">
-                            <FaWifi />
-                          </span>
-                          Wi-Fi
-                        </Typography>
-                        <Typography className="info-card-value">{property.wifiInfo}</Typography>
-                      </Paper>
-                    </Grid>
-                  </>
-                )}
-              </Grid>
-            </Paper>
+            <Grid container spacing={3}>
+              {isEditing ? (
+                <>
+ 
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
+                      name="maxGuests"
+                      label="��宿泊人数"
+                      type="number"
+                      value={editedProperty?.maxGuests || ''}
+                      onChange={handleInputChange}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={editedProperty?.smokingAllowed || false}
+                          onChange={(e) => handleInputChange({
+                            target: { name: 'smokingAllowed', value: e.target.checked }
+                          })}
+                        />
+                      }
+                      label="喫煙可"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={editedProperty?.petsAllowed || false}
+                          onChange={(e) => handleInputChange({
+                            target: { name: 'petsAllowed', value: e.target.checked }
+                          })}
+                        />
+                      }
+                      label="ペット可"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
+                      name="wifiInfo"
+                      label="Wi-Fi情報"
+                      value={editedProperty?.wifiInfo || ''}
+                      onChange={handleInputChange}
+                    />
+                  </Grid>
+                </>
+              ) : (
+                <>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="info-card">
+                      <Typography className="info-card-title">
+                        <span className="icon-wrapper">
+                          <FaUserFriends />
+                        </span>
+                        最大宿泊人数
+                      </Typography>
+                      <Typography className="info-card-value">{property.maxGuests}名</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="info-card">
+                      <Typography className="info-card-title">
+                        <span className="icon-wrapper">
+                          <FaSmoking />
+                        </span>
+                        喫煙
+                      </Typography>
+                      <Typography className="info-card-value">{property.smokingAllowed ? '可' : '不可'}</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="info-card">
+                      <Typography className="info-card-title">
+                        <span className="icon-wrapper">
+                          <FaPaw />
+                        </span>
+                        ペット
+                      </Typography>
+                      <Typography className="info-card-value">{property.petsAllowed ? '可' : '不可'}</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="info-card">
+                      <Typography className="info-card-title">
+                        <span className="icon-wrapper">
+                          <FaWifi />
+                        </span>
+                        Wi-Fi
+                      </Typography>
+                      <Typography className="info-card-value">{property.wifiInfo}</Typography>
+                    </Paper>
+                  </Grid>
+
+                </>
+              )}
+            </Grid>
           </section>
 
-          {/* 料金・ポリシーセクション */}
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaMoneyBillWave className="mr-2 text-indigo-600" /> 料金・ポリシー
             </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
-              <Grid container spacing={3}>
-                {isEditing ? (
-                  <>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <TextField
-                        fullWidth
-                        name="cleaningFee"
-                        label="清掃料金"
-                        type="number"
-                        value={editedProperty?.cleaningFee || ''}
-                        onChange={handleInputChange}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <TextField
-                        fullWidth
-                        name="parking"
-                        label="駐車場"
-                        value={editedProperty?.parking || ''}
-                        onChange={handleInputChange}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        name="cancellationPolicy"
-                        label="キャンセルポリシー"
-                        value={editedProperty?.cancellationPolicy || ''}
-                        onChange={handleInputChange}
-                      />
-                    </Grid>
-                  </>
-                ) : (
-                  <>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Paper className="p-4 bg-white shadow-md">
-                        <Typography variant="subtitle1" className="font-semibold flex items-center">
-                          <FaMoneyBillWave className="mr-2 text-indigo-600" /> 清掃料金：
-                        </Typography>
-                        <Typography>¥{property.cleaningFee?.toLocaleString()}</Typography>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <Paper className="p-4 bg-white shadow-md">
-                        <Typography variant="subtitle1" className="font-semibold flex items-center">
-                          <FaParking className="mr-2 text-indigo-600" /> 駐車場：
-                        </Typography>
-                        <Typography>{property.parking}</Typography>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Paper className="p-4 bg-white shadow-md">
-                        <Typography variant="subtitle1" className="font-semibold flex items-center">
-                          <FaFileContract className="mr-2 text-indigo-600" /> キャンセルポリシ：
-                        </Typography>
-                        <Typography>{property.cancellationPolicy}</Typography>
-                      </Paper>
-                    </Grid>
-                  </>
-                )}
-              </Grid>
-            </Paper>
+            <Grid container spacing={3}>
+              {isEditing ? (
+                <>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
+                      name="cleaningFee"
+                      label="清掃料金"
+                      type="number"
+                      value={editedProperty?.cleaningFee || ''}
+                      onChange={handleInputChange}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
+                      name="parking"
+                      label="駐車場"
+                      value={editedProperty?.parking || ''}
+                      onChange={handleInputChange}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      name="cancellationPolicy"
+                      label="キャンセルポリシー"
+                      value={editedProperty?.cancellationPolicy || ''}
+                      onChange={handleInputChange}
+                    />
+                  </Grid>
+                </>
+              ) : (
+                <>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaMoneyBillWave className="mr-2 text-indigo-600" /> 清掃料金：
+                      </Typography>
+                      <Typography>¥{property.cleaningFee?.toLocaleString()}</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaParking className="mr-2 text-indigo-600" /> 駐車場：
+                      </Typography>
+                      <Typography>{property.parking}</Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaFileContract className="mr-2 text-indigo-600" /> キャンセルポリシ：
+                      </Typography>
+                      <Typography>{property.cancellationPolicy}</Typography>
+                    </Paper>
+                  </Grid>
+                </>
+              )}
+            </Grid>
           </section>
 
-          {/* 周辺情報セクション */}
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaTree className="mr-2 text-indigo-600" /> 周辺情報
             </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
-              <Grid container spacing={3}>
-                {isEditing ? (
-                  <>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        name="nearbyAttractions"
-                        label="近隣の観光スポット (ンマ区切り)"
-                        value={(editedProperty?.nearbyAttractions ?? []).join(', ')}
-                        onChange={(e) => handleArrayInputChange('nearbyAttractions', e.target.value.split(',').map(item => item.trim()))}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        name="furnishings"
-                        label="主な設備・道具 (カンマ区切り)"
-                        value={(editedProperty?.furnishings ?? []).join(', ')}
-                        onChange={(e) => handleArrayInputChange('furnishings', e.target.value.split(',').map(item => item.trim()))}
-                      />
-                    </Grid>
-                  </>
-                ) : (
-                  <>
-                    <Grid item xs={12} sm={6}>
-                      <Paper className="p-4 bg-white shadow-md">
-                        <Typography variant="subtitle1" className="font-semibold flex items-center">
-                          <FaMapMarkedAlt className="mr-2 text-indigo-600" /> 近隣の観光スポット：
-                        </Typography>
-                        <ul className="list-disc pl-5">
-                          {property.nearbyAttractions && property.nearbyAttractions.length > 0 ? (
-                            property.nearbyAttractions.map((spot, index) => (
-                              <li key={index}>{spot}</li>
-                            ))
-                          ) : (
-                            <li>近隣の観光スポット情報はありません</li>
-                          )}
-                        </ul>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Paper className="p-4 bg-white shadow-md">
-                        <Typography variant="subtitle1" className="font-semibold flex items-center">
-                          <FaTools className="mr-2 text-indigo-600" /> 主設備・家具：
-                        </Typography>
-                        <ul className="list-disc pl-5">
-                          {property.furnishings && property.furnishings.length > 0 ? (
-                            property.furnishings.map((item, index) => (
-                              <li key={index}>{item}</li>
-                            ))
-                          ) : (
-                            <li>主設備・家具報はありません</li>
-                          )}
-                        </ul>
-                      </Paper>
-                    </Grid>
-                  </>
-                )}
-              </Grid>
-            </Paper>
-          </section>
-
-          {/* 予約可能期間セクション */}
-          <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約可能期間
-            </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
+            <Grid container spacing={3}>
               {isEditing ? (
                 <>
-                  <TextField
-                    type="date"
-                    name="availableFrom"
-                    label="開始日"
-                    value={editedProperty?.availableFrom instanceof Timestamp 
-                      ? editedProperty.availableFrom.toDate().toISOString().split('T')[0]
-                      : ''}
-                    onChange={handleInputChange}
-                    className="mr-4"
-                  />
-                  <TextField
-                    type="date"
-                    name="availableTo"
-                    label="終了日"
-                    value={editedProperty?.availableTo instanceof Timestamp
-                      ? editedProperty.availableTo.toDate().toISOString().split('T')[0]
-                      : ''}
-                    onChange={handleInputChange}
-                  />
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      name="nearbyAttractions"
+                      label="近隣の観光スポット (ンマ区切り)"
+                      value={(editedProperty?.nearbyAttractions ?? []).join(', ')}
+                      onChange={(e) => handleArrayInputChange('nearbyAttractions', e.target.value.split(',').map(item => item.trim()))}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      name="furnishings"
+                      label="主な設備・道具 (カンマ区切り)"
+                      value={(editedProperty?.furnishings ?? []).join(', ')}
+                      onChange={(e) => handleArrayInputChange('furnishings', e.target.value.split(',').map(item => item.trim()))}
+                    />
+                  </Grid>
                 </>
               ) : (
-                <Typography>
-                  {property.availableFrom && property.availableTo
-                    ? `${formatDate(property.availableFrom)} から ${formatDate(property.availableTo)} まで`
-                    : '予約能期間は設定されていません'}
-                </Typography>
+                <>
+                  <Grid item xs={12} sm={6}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaMapMarkedAlt className="mr-2 text-indigo-600" /> 近隣の観光スポット：
+                      </Typography>
+                      <ul className="list-disc pl-5">
+                        {property.nearbyAttractions && property.nearbyAttractions.length > 0 ? (
+                          property.nearbyAttractions.map((spot, index) => (
+                            <li key={index}>{spot}</li>
+                          ))
+                        ) : (
+                          <li>近隣の観光スポット情報はありません</li>
+                        )}
+                      </ul>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Paper className="p-4 bg-white shadow-md">
+                      <Typography variant="subtitle1" className="font-semibold flex items-center">
+                        <FaTools className="mr-2 text-indigo-600" /> 主設備・家具：
+                      </Typography>
+                      <ul className="list-disc pl-5">
+                        {property.furnishings && property.furnishings.length > 0 ? (
+                          property.furnishings.map((item, index) => (
+                            <li key={index}>{item}</li>
+                          ))
+                        ) : (
+                          <li>主設備・家具報はありません</li>
+                        )}
+                      </ul>
+                    </Paper>
+                  </Grid>
+                </>
               )}
-            </Paper>
+            </Grid>
           </section>
 
-          {/* 特別オファーセクション */}
+          <section className="mb-8">
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約能期間
+            </Typography>
+            {isEditing ? (
+              <>
+                <TextField
+                  type="date"
+                  name="availableFrom"
+                  label="開始日"
+                  value={editedProperty?.availableFrom instanceof Timestamp 
+                    ? editedProperty.availableFrom.toDate().toISOString().split('T')[0]
+                    : ''}
+                  onChange={handleInputChange}
+                  className="mr-4"
+                />
+                <TextField
+                  type="date"
+                  name="availableTo"
+                  label="終了日"
+                  value={editedProperty?.availableTo instanceof Timestamp
+                    ? editedProperty.availableTo.toDate().toISOString().split('T')[0]
+                    : ''}
+                  onChange={handleInputChange}
+                />
+              </>
+            ) : (
+              <Typography>
+                {property.availableFrom && property.availableTo
+                  ? `${formatDate(property.availableFrom)} から ${formatDate(property.availableTo)} まで`
+                  : '予約能期間は設定されていません'}
+              </Typography>
+            )}
+          </section>
+
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaCocktail className="mr-2 text-indigo-600" /> 特別オファー
             </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
-              {isEditing ? (
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  name="specialOffers"
-                  label="特別ファー（1行に1つ）"
-                  value={editedProperty?.specialOffers?.join('\n') || ''}
-                  onChange={(e) => handleArrayInputChange('specialOffers', e.target.value.split('\n').filter(offer => offer.trim() !== ''))}
-                />
-              ) : (
-                <ul>
-                  {property.specialOffers?.map((offer, index) => (
-                    <li key={index}>{offer}</li>
-                  )) || <li>現在、特別オファーはありません</li>}
-                </ul>
-              )}
-            </Paper>
+            {isEditing ? (
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                name="specialOffers"
+                label="特別ファー（1行に1つ）"
+                value={editedProperty?.specialOffers?.join('\n') || ''}
+                onChange={(e) => handleArrayInputChange('specialOffers', e.target.value.split('\n').filter(offer => offer.trim() !== ''))}
+              />
+            ) : (
+              <ul>
+                {property.specialOffers?.map((offer, index) => (
+                  <li key={index}>{offer}</li>
+                )) || <li>現在、特別オファーはありません</li>}
+              </ul>
+            )}
           </section>
 
-          {/* 地図セクション */}
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaMapMarkerAlt className="mr-2 text-indigo-600" /> 地図
             </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
-              {isEditing ? (
-                <>
-                  <TextField
-                    fullWidth
-                    name="latitude"
-                    label="度"
-                    type="number"
-                    value={editedProperty?.latitude || ''}
-                    onChange={handleInputChange}
-                    className="mb-4"
-                  />
-                  <TextField
-                    fullWidth
-                    name="longitude"
-                    label="経度"
-                    type="number"
-                    value={editedProperty?.longitude || ''}
-                    onChange={handleInputChange}
-                    className="mb-4"
-                  />
-                </>
+            {isEditing ? (
+              <>
+                <TextField
+                  fullWidth
+                  name="latitude"
+                  label="度"
+                  type="number"
+                  value={editedProperty?.latitude || ''}
+                  onChange={handleInputChange}
+                  className="mb-4"
+                />
+                <TextField
+                  fullWidth
+                  name="longitude"
+                  label="経度"
+                  type="number"
+                  value={editedProperty?.longitude || ''}
+                  onChange={handleInputChange}
+                  className="mb-4"
+                />
+              </>
+            ) : (
+              property.latitude && property.longitude && scriptLoaded ? (
+                <MapComponent 
+                  lat={property.latitude} 
+                  lng={property.longitude} 
+                />
               ) : (
-                property.latitude && property.longitude && scriptLoaded ? (
-                  <MapComponent 
-                    lat={property.latitude} 
-                    lng={property.longitude} 
-                  />
-                ) : (
-                  <Typography>地図情報が利用できません</Typography>
-                )
-              )}
-            </Paper>
+                <Typography>地図情報が利用できません</Typography>
+              )
+            )}
           </section>
 
-          {/* 予約カレンダーセクション */}
+          {isEditing && (
+            <section className="mb-8">
+              <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+                <FaCalendarAlt className="mr-2 text-indigo-600" /> iCal 設定
+              </Typography>
+              <TextField
+                fullWidth
+                name="icalUrl"
+                label="iCal URL"
+                value={editedProperty?.icalUrl || ''}
+                onChange={handleInputChange}
+                className="mb-4"
+              />
+            </section>
+          )}
+
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約カレンダー
             </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
-              {property?.icalUrl ? (
-                <Calendar 
-                  events={calendarEvents} 
-                  currentMonth={currentMonth}
-                  onMonthChange={handleMonthChange}
-                  onDateClick={handleDateClick}
-                />
-              ) : (
-                <Typography>予約カレンダーは利用できません</Typography>
-              )}
-            </Paper>
+            {property?.icalUrl ? (
+              <Calendar 
+                events={calendarEvents} 
+                currentMonth={currentMonth}
+                onMonthChange={handleMonthChange}
+                onDateClick={handleDateClick}
+              />
+            ) : (
+              <Typography>予約カレンダーは利用できません</Typography>
+            )}
           </section>
 
-          {/* 予約セクション */}
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約
             </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel id="start-date-label">チェックイン日</InputLabel>
-                    <Select
-                      labelId="start-date-label"
-                      value={selectedStartDate}
-                      onChange={handleStartDateChange}
-                    >
-                      {availableDates.map((date) => (
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel id="start-date-label">チェックイン日</InputLabel>
+                  <Select
+                    labelId="start-date-label"
+                    value={selectedStartDate}
+                    onChange={handleStartDateChange}
+                  >
+                    {availableDates.map((date) => (
+                      <MenuItem key={date.toISOString()} value={date.toISOString()}>
+                        {date.toLocaleDateString('ja-JP')}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel id="end-date-label">チェックアウト日</InputLabel>
+                  <Select
+                    labelId="end-date-label"
+                    value={selectedEndDate}
+                    onChange={handleEndDateChange}
+                    disabled={!selectedStartDate}
+                  >
+                    {availableDates
+                      .filter((date) => new Date(date) > new Date(selectedStartDate))
+                      .map((date) => (
                         <MenuItem key={date.toISOString()} value={date.toISOString()}>
                           {date.toLocaleDateString('ja-JP')}
                         </MenuItem>
                       ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel id="end-date-label">チェックアウト日</InputLabel>
-                    <Select
-                      labelId="end-date-label"
-                      value={selectedEndDate}
-                      onChange={handleEndDateChange}
-                      disabled={!selectedStartDate}
-                    >
-                      {availableDates
-                        .filter((date) => new Date(date) > new Date(selectedStartDate))
-                        .map((date) => (
-                          <MenuItem key={date.toISOString()} value={date.toISOString()}>
-                            {date.toLocaleDateString('ja-JP')}
-                          </MenuItem>
-                        ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleBooking}
-                    disabled={!selectedStartDate || !selectedEndDate}
-                  >
-                    予約する
-                  </Button>
-                </Grid>
+                  </Select>
+                </FormControl>
               </Grid>
-            </Paper>
+              <Grid item xs={12}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleBooking}
+                  disabled={!selectedStartDate || !selectedEndDate}
+                >
+                  予約する
+                </Button>
+              </Grid>
+            </Grid>
           </section>
 
           {isAdmin && (
@@ -1594,67 +1606,95 @@ export default function PropertyDetail() {
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
               <FaGlobe className="mr-2 text-green-500" /> 予約リンク
             </Typography>
-            <Paper className="p-6 bg-white shadow-md rounded-lg">
-              {isEditing ? (
-                <div>
-                  <div className="flex items-center space-x-2 mb-4">
-                    <TextField
-                      fullWidth
-                      value={newBookingLink.url}
-                      onChange={handleBookingLinkChange}
-                      placeholder="予約サイトのURL"
-                      className="flex-grow"
-                    />
-                    <IconButton onClick={() => handleBookingLinkTypeChange('airbnb')} color={newBookingLink.type === 'airbnb' ? 'primary' : 'default'}>
-                      <FaAirbnb />
-                    </IconButton>
-                    <IconButton onClick={() => handleBookingLinkTypeChange('booking')} color={newBookingLink.type === 'booking' ? 'primary' : 'default'}>
-                      <FaBook />
-                    </IconButton>
-                    <IconButton onClick={() => handleBookingLinkTypeChange('other')} color={newBookingLink.type === 'other' ? 'primary' : 'default'}>
-                      <FaGlobe />
-                    </IconButton>
-                    <Button onClick={handleAddBookingLink} variant="contained" startIcon={<AddIcon />}>
-                      追加
-                    </Button>
-                  </div>
-                  <Grid container spacing={2}>
-                    {editedProperty?.bookingLinks?.map((link, index) => (
-                      <Grid item xs={12} sm={6} md={4} key={index}>
-                        <Paper className="p-4 flex justify-between items-center">
-                          <div className="flex items-center">
-                            {getBookingLinkIcon(link.type)}
-                            <Typography className="ml-2 truncate">{link.url}</Typography>
-                          </div>
-                          <IconButton onClick={() => handleRemoveBookingLink(index)} color="secondary">
-                            <DeleteIcon />
-                          </IconButton>
-                        </Paper>
-                      </Grid>
-                    ))}
-                  </Grid>
+            {isEditing ? (
+              <div>
+                <div className="flex items-center space-x-2 mb-4">
+                  <TextField
+                    fullWidth
+                    value={newBookingLink.url}
+                    onChange={handleBookingLinkChange}
+                    placeholder="予約サイトのURL"
+                    className="flex-grow"
+                  />
+                  <IconButton onClick={() => handleBookingLinkTypeChange('airbnb')} color={newBookingLink.type === 'airbnb' ? 'primary' : 'default'}>
+                    <FaAirbnb />
+                  </IconButton>
+                  <IconButton onClick={() => handleBookingLinkTypeChange('booking')} color={newBookingLink.type === 'booking' ? 'primary' : 'default'}>
+                    <FaBook />
+                  </IconButton>
+                  <IconButton onClick={() => handleBookingLinkTypeChange('other')} color={newBookingLink.type === 'other' ? 'primary' : 'default'}>
+                    <FaGlobe />
+                  </IconButton>
+                  <Button onClick={handleAddBookingLink} variant="contained" startIcon={<AddIcon />}>
+                    追加
+                  </Button>
                 </div>
-              ) : (
                 <Grid container spacing={2}>
-                  {property.bookingLinks?.map((link, index) => (
+                  {editedProperty?.bookingLinks?.map((link, index) => (
                     <Grid item xs={12} sm={6} md={4} key={index}>
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block p-4 bg-white shadow-md rounded-lg hover:shadow-lg transition-shadow"
-                      >
+                      <Paper className="p-4 flex justify-between items-center">
                         <div className="flex items-center">
                           {getBookingLinkIcon(link.type)}
                           <Typography className="ml-2 truncate">{link.url}</Typography>
                         </div>
-                      </a>
+                        <IconButton onClick={() => handleRemoveBookingLink(index)} color="secondary">
+                          <DeleteIcon />
+                        </IconButton>
+                      </Paper>
                     </Grid>
                   ))}
                 </Grid>
-              )}
-            </Paper>
+              </div>
+            ) : (
+              <Grid container spacing={2}>
+                {property.bookingLinks?.map((link, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block p-4 bg-white shadow-md rounded-lg hover:shadow-lg transition-shadow"
+                    >
+                      <div className="flex items-center">
+                        {getBookingLinkIcon(link.type)}
+                        <Typography className="ml-2 truncate">{link.url}</Typography>
+                      </div>
+                    </a>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
           </section>
+
+          {showBookingForm && (
+            <Paper elevation={3} className="p-8 mb-8 bg-white shadow-xl">
+              <Typography variant="h5" className="mb-4">予約情報入力</Typography>
+              <TextField
+                fullWidth
+                label="お名前"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                className="mb-4"
+              />
+              <TextField
+                fullWidth
+                label="メールアドレス"
+                type="email"
+                value={guestEmail}
+                onChange={(e) => setGuestEmail(e.target.value)}
+                className="mb-4"
+              />
+              <Typography variant="body1" className="mb-4">
+                予約期間：{new Date(selectedStartDate).toLocaleDateString('ja-JP')} から {new Date(selectedEndDate).toLocaleDateString('ja-JP')} まで
+              </Typography>
+              <Typography variant="body1" className="mb-4">
+                合計金額：¥{property.price ? (property.price * (new Date(selectedEndDate).getTime() - new Date(selectedStartDate).getTime()) / (1000 * 60 * 60 * 24)).toLocaleString() : '価格はお問い合わせください'}
+              </Typography>
+              <Button variant="contained" color="primary" onClick={handleSubmitBooking}>
+                予約を確定する
+              </Button>
+            </Paper>
+          )}
 
         </Container>
       </div>
