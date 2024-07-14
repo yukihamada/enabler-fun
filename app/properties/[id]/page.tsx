@@ -8,8 +8,8 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize, Fab, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, Stepper, Step, StepLabel, Box } from '@mui/material';
 import Image from 'next/image';
 import Layout from '../../../components/Layout';
-import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshirt, FaSnowman, FaSubway, FaShoppingCart, FaTree, FaSchool, FaCocktail, FaSpa, FaCalendarAlt, FaMoneyBillWave, FaInfoCircle, FaMapMarkerAlt, FaClipboardList, FaUserFriends, FaSmoking, FaPaw, FaParking, FaFileContract, FaMapMarkedAlt, FaTools, FaExclamationTriangle, FaLock, FaClipboard, FaTrash } from 'react-icons/fa';
-import { MdEdit as EditIcon, MdSave as SaveIcon, MdCancel as CancelIcon } from 'react-icons/md';
+import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshirt, FaSnowman, FaSubway, FaShoppingCart, FaTree, FaSchool, FaCocktail, FaSpa, FaCalendarAlt, FaMoneyBillWave, FaInfoCircle, FaMapMarkerAlt, FaClipboardList, FaUserFriends, FaSmoking, FaPaw, FaParking, FaFileContract, FaMapMarkedAlt, FaTools, FaExclamationTriangle, FaLock, FaClipboard, FaTrash, FaAirbnb, FaBook, FaGlobe } from 'react-icons/fa';
+import { MdEdit as EditIcon, MdSave as SaveIcon, MdCancel as CancelIcon, MdDelete as DeleteIcon, MdAdd as AddIcon } from 'react-icons/md';
 import { Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../../lib/firebase';
@@ -19,7 +19,6 @@ import Calendar from '../../../components/Calendar';
 import { SelectChangeEvent } from '@mui/material/Select';
 import { getAuth } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { loadStripe } from '@stripe/stripe-js';
 
 interface NearbyFacility {
   type: string;
@@ -57,6 +56,12 @@ interface Property {
   latitude?: number;
   longitude?: number;
   icalUrl?: string;
+  bookingLinks?: BookingLink[];
+}
+
+interface BookingLink {
+  url: string;
+  type: 'airbnb' | 'booking' | 'other';
 }
 
 type AmenityKey = keyof typeof amenityIcons;
@@ -209,7 +214,7 @@ const BookingDialog: React.FC<{
         <TextField
           fullWidth
           name="cardCVC"
-          label="セキュリティコード (CVC)"
+          label="キュリティコード (CVC)"
           value={formData.cardCVC}
           onChange={handleInputChange}
           margin="normal"
@@ -275,6 +280,7 @@ export default function PropertyDetail() {
   const [icalToken, setIcalToken] = useState('');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const router = useRouter();
+  const [newBookingLink, setNewBookingLink] = useState<BookingLink>({ url: '', type: 'other' });
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -435,7 +441,7 @@ export default function PropertyDetail() {
     try {
       const { id, ...updateData } = editedProperty;
       
-      // 保存前に配列プロパティを確認
+      // 保前に配列プロパティを確認
       updateData.imageUrls = Array.isArray(updateData.imageUrls) ? updateData.imageUrls : [];
       updateData.nearbyAttractions = Array.isArray(updateData.nearbyAttractions) ? updateData.nearbyAttractions : [];
       updateData.furnishings = Array.isArray(updateData.furnishings) ? updateData.furnishings : [];
@@ -463,7 +469,7 @@ export default function PropertyDetail() {
     setEditedProperty(prev => {
       if (!prev) return null;
       if (name === 'availableFrom' || name === 'availableTo') {
-        // 日付入���場合、Firestore のタイムスタンプ形式に変換
+        // 日付入場合、Firestore のタイムスタンプ形式に変換
         const date = new Date(value);
         return { ...prev, [name]: Timestamp.fromDate(date) };
       }
@@ -577,47 +583,31 @@ export default function PropertyDetail() {
 
   const handleBookingSubmit = async (formData: BookingFormData) => {
     if (!user || !selectedStartDate || !selectedEndDate || !property) {
-      console.error('予約に必要な情報が不足しています');
+      console.error('予約に必要な情報��不足しています');
       return;
     }
 
     try {
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          propertyId: property.id,
-          startDate: selectedStartDate,
-          endDate: selectedEndDate,
-          price: property.price,
-          guestName: formData.name,
-          guestEmail: formData.email,
-        }),
-      });
+      const bookingData: Booking = {
+        id: doc(collection(db, 'bookings')).id,
+        propertyId: property.id,
+        userId: user.uid,
+        guestName: formData.name,
+        guestEmail: formData.email,
+        startDate: Timestamp.fromDate(new Date(selectedStartDate)),
+        endDate: Timestamp.fromDate(new Date(selectedEndDate)),
+        status: 'pending',
+      };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'チェックアウトセッションの作成に失敗しました');
-      }
-
-      const { sessionId } = await response.json();
-      
-      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-      if (stripe) {
-        const result = await stripe.redirectToCheckout({
-          sessionId: sessionId
-        });
-        if (result.error) {
-          throw new Error(result.error.message);
-        }
-      } else {
-        throw new Error('Stripeの初期化に失敗しました');
-      }
+      const docRef = await addDoc(collection(db, 'bookings'), bookingData);
+      console.log('予約が作成されました。ID:', docRef.id);
+      alert('予約が完了しました。');
+      setIsBookingDialogOpen(false);
+      setSelectedStartDate('');
+      setSelectedEndDate('');
     } catch (error) {
-      console.error('予約処理中にエラーが発生しました:', error);
-      alert('予約処理中にエラーが発生しました。もう一度お試しください。');
+      console.error('予約の作成中にエラーが発生しました:', error);
+      alert('予約の作成中にエラーが発生しました。もう一度お試しください。');
     }
   };
 
@@ -703,30 +693,50 @@ export default function PropertyDetail() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('チェックアウトセッションの作成に失敗しました');
-      }
-
       const { sessionId } = await response.json();
-      
-      if (!sessionId) {
-        throw new Error('セッションIDが取得できませんでした');
-      }
-
-      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-      if (stripe) {
-        const result = await stripe.redirectToCheckout({
-          sessionId: sessionId
-        });
-        if (result.error) {
-          throw new Error(result.error.message);
-        }
-      } else {
-        throw new Error('Stripeの初期化に失敗しました');
-      }
+      router.push(`/checkout/${sessionId}`);
     } catch (error) {
       console.error('チェックアウトセッションの作成中にエラーが発生しました:', error);
       alert('予約処理中にエラーが発生しました。もう一度お試しください。');
+    }
+  };
+
+  const handleBookingLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewBookingLink({ ...newBookingLink, url: e.target.value });
+  };
+
+  const handleBookingLinkTypeChange = (type: BookingLink['type']) => {
+    setNewBookingLink({ ...newBookingLink, type });
+  };
+
+  const handleAddBookingLink = () => {
+    if (newBookingLink.url.trim() !== '') {
+      setEditedProperty(prev => {
+        if (!prev) return null;
+        const updatedLinks = [...(prev.bookingLinks || []), newBookingLink];
+        return { ...prev, bookingLinks: updatedLinks };
+      });
+      setNewBookingLink({ url: '', type: 'other' });
+    }
+  };
+
+  const handleRemoveBookingLink = (index: number) => {
+    setEditedProperty(prev => {
+      if (!prev) return null;
+      const updatedLinks = [...(prev.bookingLinks || [])];
+      updatedLinks.splice(index, 1);
+      return { ...prev, bookingLinks: updatedLinks };
+    });
+  };
+
+  const getBookingLinkIcon = (type: BookingLink['type']) => {
+    switch (type) {
+      case 'airbnb':
+        return <FaAirbnb className="text-red-500" />;
+      case 'booking':
+        return <FaBook className="text-blue-500" />;
+      default:
+        return <FaGlobe className="text-green-500" />;
     }
   };
 
@@ -1243,7 +1253,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="nearbyAttractions"
-                      label="近隣の観光スポット (カンマ区切り)"
+                      label="近隣の観光スポット (���ンマ区切り)"
                       value={(editedProperty?.nearbyAttractions ?? []).join(', ')}
                       onChange={(e) => handleArrayInputChange('nearbyAttractions', e.target.value.split(',').map(item => item.trim()))}
                     />
@@ -1271,7 +1281,7 @@ export default function PropertyDetail() {
                             <li key={index}>{spot}</li>
                           ))
                         ) : (
-                          <li>���隣の観光スポット情報はありません</li>
+                          <li>近隣の観光スポット情報はありません</li>
                         )}
                       </ul>
                     </Paper>
@@ -1327,7 +1337,7 @@ export default function PropertyDetail() {
               <Typography>
                 {property.availableFrom && property.availableTo
                   ? `${formatDate(property.availableFrom)} から ${formatDate(property.availableTo)} まで`
-                  : '予約可能期間は設定されていません'}
+                  : '予約���能期間は設定されていません'}
               </Typography>
             )}
           </section>
@@ -1548,6 +1558,70 @@ export default function PropertyDetail() {
               </Paper>
             </section>
           )}
+
+          <section className="mb-8">
+            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+              <FaGlobe className="mr-2 text-green-500" /> 予約リンク
+            </Typography>
+            {isEditing ? (
+              <div>
+                <div className="flex items-center space-x-2 mb-4">
+                  <TextField
+                    fullWidth
+                    value={newBookingLink.url}
+                    onChange={handleBookingLinkChange}
+                    placeholder="予約サイトのURL"
+                    className="flex-grow"
+                  />
+                  <IconButton onClick={() => handleBookingLinkTypeChange('airbnb')} color={newBookingLink.type === 'airbnb' ? 'primary' : 'default'}>
+                    <FaAirbnb />
+                  </IconButton>
+                  <IconButton onClick={() => handleBookingLinkTypeChange('booking')} color={newBookingLink.type === 'booking' ? 'primary' : 'default'}>
+                    <FaBook />
+                  </IconButton>
+                  <IconButton onClick={() => handleBookingLinkTypeChange('other')} color={newBookingLink.type === 'other' ? 'primary' : 'default'}>
+                    <FaGlobe />
+                  </IconButton>
+                  <Button onClick={handleAddBookingLink} variant="contained" startIcon={<AddIcon />}>
+                    追加
+                  </Button>
+                </div>
+                <Grid container spacing={2}>
+                  {editedProperty?.bookingLinks?.map((link, index) => (
+                    <Grid item xs={12} sm={6} md={4} key={index}>
+                      <Paper className="p-4 flex justify-between items-center">
+                        <div className="flex items-center">
+                          {getBookingLinkIcon(link.type)}
+                          <Typography className="ml-2 truncate">{link.url}</Typography>
+                        </div>
+                        <IconButton onClick={() => handleRemoveBookingLink(index)} color="secondary">
+                          <DeleteIcon />
+                        </IconButton>
+                      </Paper>
+                    </Grid>
+                  ))}
+                </Grid>
+              </div>
+            ) : (
+              <Grid container spacing={2}>
+                {property.bookingLinks?.map((link, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block p-4 bg-white shadow-md rounded-lg hover:shadow-lg transition-shadow"
+                    >
+                      <div className="flex items-center">
+                        {getBookingLinkIcon(link.type)}
+                        <Typography className="ml-2 truncate">{link.url}</Typography>
+                      </div>
+                    </a>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </section>
 
         </Container>
       </div>
