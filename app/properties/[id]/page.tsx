@@ -405,7 +405,7 @@ export default function PropertyDetail() {
       const dates = [];
       const today = new Date();
       const endDate = new Date(today);
-      endDate.setDate(today.getDate() + 365); // 1��間の日付を生成
+      endDate.setDate(today.getDate() + 365); // 1間の日付を生成
 
       for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
         const currentDate = new Date(d);
@@ -619,7 +619,7 @@ export default function PropertyDetail() {
       setSelectedEndDate('');
     } catch (error) {
       console.error('予約の作成中にエラーが発生しました:', error);
-      alert('予約の作成中にエラーが発生しました。もう一度お試しください。');
+      alert('予約の作成中にエラーが発���しました。もう一度お試しください。');
     }
   };
 
@@ -644,7 +644,7 @@ export default function PropertyDetail() {
     };
 
     generateIcalToken();
-  }, [property, isAdmin]);
+  }, [property, isAdmin, icalToken]);
 
   const regenerateToken = async () => {
     if (property && isAdmin) {
@@ -679,7 +679,7 @@ export default function PropertyDetail() {
         setBookings(bookings.filter(booking => booking.id !== bookingId));
         alert('予約が正常に削除されました。');
       } catch (error) {
-        console.error('予約の削除中にエラーが発生しました:', error);
+        console.error('予約の削除中に���ラーが発生しました:', error);
         alert('予約の削除中にエラーが発生しました。');
       }
     }
@@ -722,7 +722,7 @@ export default function PropertyDetail() {
       const { sessionId } = await response.json();
       router.push(`/checkout/${sessionId}`);
     } catch (error) {
-      console.error('チェックアウトセッションの作成中にエラーが発生しました:', error);
+      console.error('チェックアウトセッションの作成中にエラーが発生しま��た:', error);
       alert('予約処理中にエラーが発生しました。もう一度お試しください。');
     }
   };
@@ -1124,7 +1124,7 @@ export default function PropertyDetail() {
                     <TextField
                       fullWidth
                       name="maxGuests"
-                      label="��宿泊人数"
+                      label="宿泊人数"
                       type="number"
                       value={editedProperty?.maxGuests || ''}
                       onChange={handleInputChange}

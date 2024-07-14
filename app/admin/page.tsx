@@ -96,7 +96,7 @@ const AdminUsers = () => {
 
   return (
     <div className="admin-container">
-      <AdminLayout isLoggedIn={isLoggedIn} onLogout={handleLogout}>
+      <AdminLayout>
         <Paper elevation={3} style={{ padding: '2rem', margin: '2rem 0', backgroundColor: '#f5f5f5' }}>
           <Typography variant="h4" gutterBottom style={{ color: '#333', borderBottom: '2px solid #1976d2', paddingBottom: '10px' }}>管理者ID管理</Typography>
           {loading ? (

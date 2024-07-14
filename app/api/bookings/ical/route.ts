@@ -7,7 +7,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { propertyId: string } }
 ) {
-  const propertyId = params.propertyId;
+  const searchParams = new URLSearchParams(request.nextUrl.search);
+  if (!searchParams.has('propertyId')) {
+    return new Response('Property ID is required', { status: 400 });
+  }
+  const propertyId = searchParams.get('propertyId') || '';
 
   try {
     // Firestoreから予約データを取得
@@ -37,7 +41,7 @@ export async function GET(
     headers.set('Content-Type', 'text/calendar');
     headers.set('Content-Disposition', `attachment; filename="bookings-${propertyId}.ics"`);
 
-    // iCalデータを返す
+    // iCalデータを返��
     return new NextResponse(icalString, {
       status: 200,
       headers: headers,

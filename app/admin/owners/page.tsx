@@ -89,8 +89,7 @@ const Owners = () => {
 
   return (
     <div className="admin-container">
-      <Header isLoggedIn={isLoggedIn} onLogout={handleLogout} />
-      <AdminLayout isLoggedIn={isLoggedIn} onLogout={handleLogout}>
+      <AdminLayout>
         <Typography variant="h4" component="h1" gutterBottom>
           <BusinessIcon sx={{ mr: 1 }} />
           オーナー管理
@@ -164,7 +163,7 @@ const Owners = () => {
               ))}
             </List>
           ) : (
-            <Typography>オーナーが登録��れていません。</Typography>
+            <Typography>オーナーが登録れていせん。</Typography>
           )}
         </Paper>
       </AdminLayout>

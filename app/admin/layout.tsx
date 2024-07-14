@@ -1,31 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { ReactNode } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 
 interface AdminLayoutProps {
-  children: React.ReactNode;
-  isLoggedIn: boolean;
-  onLogout: () => void;
+  children: ReactNode;
 }
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children, isLoggedIn: propIsLoggedIn, onLogout }) => {
-  const [localIsLoggedIn, setLocalIsLoggedIn] = useState(propIsLoggedIn);
-
-  const handleLogout = () => {
-    // ログアウト処理
-    setLocalIsLoggedIn(false);
-    onLogout();
-  };
-
+export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <>
-      <Header isLoggedIn={localIsLoggedIn} onLogout={handleLogout} />
+      <Header />
       <main>{children}</main>
       <Footer />
     </>
   );
-}
-
-export default AdminLayout;
+};
