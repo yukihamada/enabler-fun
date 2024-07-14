@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs, query, where, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize, Fab, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, Stepper, Step, StepLabel, Box, DialogContentText } from '@mui/material';
+import { Typography, Paper, Grid, Container, Skeleton, Button, TextField, Chip, IconButton, Checkbox, FormControlLabel, TextareaAutosize, Fab, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select, FormControl, InputLabel, Stepper, Step, StepLabel, Box } from '@mui/material';
 import Image from 'next/image';
 import Layout from '../../../components/Layout';
 import { FaBed, FaBath, FaRuler, FaWifi, FaSnowflake, FaCar, FaUtensils, FaTshirt, FaSnowman, FaSubway, FaShoppingCart, FaTree, FaSchool, FaCocktail, FaSpa, FaCalendarAlt, FaMoneyBillWave, FaInfoCircle, FaMapMarkerAlt, FaClipboardList, FaUserFriends, FaSmoking, FaPaw, FaParking, FaFileContract, FaMapMarkedAlt, FaTools, FaExclamationTriangle, FaLock, FaClipboard, FaTrash } from 'react-icons/fa';
@@ -18,6 +18,8 @@ import MapComponent from '../../../components/MapComponent';
 import Calendar from '../../../components/Calendar';
 import { SelectChangeEvent } from '@mui/material/Select';
 import { getAuth } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { loadStripe } from '@stripe/stripe-js';
 
 interface NearbyFacility {
   type: string;
@@ -272,8 +274,7 @@ export default function PropertyDetail() {
   const [icalUrl, setIcalUrl] = useState('');
   const [icalToken, setIcalToken] = useState('');
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bookingToDelete, setBookingToDelete] = useState<Booking | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -434,7 +435,7 @@ export default function PropertyDetail() {
     try {
       const { id, ...updateData } = editedProperty;
       
-      // 保存前に配列プロパィを確認
+      // 保存前に配列プロパティを確認
       updateData.imageUrls = Array.isArray(updateData.imageUrls) ? updateData.imageUrls : [];
       updateData.nearbyAttractions = Array.isArray(updateData.nearbyAttractions) ? updateData.nearbyAttractions : [];
       updateData.furnishings = Array.isArray(updateData.furnishings) ? updateData.furnishings : [];
@@ -462,7 +463,7 @@ export default function PropertyDetail() {
     setEditedProperty(prev => {
       if (!prev) return null;
       if (name === 'availableFrom' || name === 'availableTo') {
-        // 日付入力場合、Firestore のタイムスタンプ��式に変換
+        // 日付入���場合、Firestore のタイムスタンプ形式に変換
         const date = new Date(value);
         return { ...prev, [name]: Timestamp.fromDate(date) };
       }
@@ -581,26 +582,42 @@ export default function PropertyDetail() {
     }
 
     try {
-      const bookingData: Booking = {
-        id: doc(collection(db, 'bookings')).id,
-        propertyId: property.id,
-        userId: user.uid,
-        guestName: formData.name,
-        guestEmail: formData.email,
-        startDate: Timestamp.fromDate(new Date(selectedStartDate)),
-        endDate: Timestamp.fromDate(new Date(selectedEndDate)),
-        status: 'pending',
-      };
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          propertyId: property.id,
+          startDate: selectedStartDate,
+          endDate: selectedEndDate,
+          price: property.price,
+          guestName: formData.name,
+          guestEmail: formData.email,
+        }),
+      });
 
-      const docRef = await addDoc(collection(db, 'bookings'), bookingData);
-      console.log('予約が作成されました。ID:', docRef.id);
-      alert('予約が完了しました。');
-      setIsBookingDialogOpen(false);
-      setSelectedStartDate('');
-      setSelectedEndDate('');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'チェックアウトセッションの作成に失敗しました');
+      }
+
+      const { sessionId } = await response.json();
+      
+      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+      if (stripe) {
+        const result = await stripe.redirectToCheckout({
+          sessionId: sessionId
+        });
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
+      } else {
+        throw new Error('Stripeの初期化に失敗しました');
+      }
     } catch (error) {
-      console.error('予約の作成中にエラーが発生しました:', error);
-      alert('予約の作成中にエラーが発生しました。もう一度お試しください。');
+      console.error('予約処理中にエラーが発生しました:', error);
+      alert('予約処理中にエラーが発生しました。もう一度お試しください。');
     }
   };
 
@@ -653,18 +670,63 @@ export default function PropertyDetail() {
     fetchBookings();
   }, [property, isAdmin]);
 
-  const handleDeleteBooking = async () => {
-    if (!bookingToDelete) return;
+  const handleDeleteBooking = async (bookingId: string) => {
+    if (window.confirm('この予約を削除してもよろしいですか？')) {
+      try {
+        await deleteDoc(doc(db, 'bookings', bookingId));
+        setBookings(bookings.filter(booking => booking.id !== bookingId));
+        alert('予約が正常に削除されました。');
+      } catch (error) {
+        console.error('予約の削除中にエラーが発生しました:', error);
+        alert('予約の削除中にエラーが発生しました。');
+      }
+    }
+  };
+
+  const handleBooking = async () => {
+    if (!selectedStartDate || !selectedEndDate || !property) {
+      alert('日付を選択してください。');
+      return;
+    }
 
     try {
-      await deleteDoc(doc(db, 'bookings', bookingToDelete.id));
-      setBookings(bookings.filter(booking => booking.id !== bookingToDelete.id));
-      setDeleteDialogOpen(false);
-      setBookingToDelete(null);
-      alert('予約が削除されました。');
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          propertyId: property.id,
+          startDate: selectedStartDate,
+          endDate: selectedEndDate,
+          price: property.price,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('チェックアウトセッションの作成に失敗しました');
+      }
+
+      const { sessionId } = await response.json();
+      
+      if (!sessionId) {
+        throw new Error('セッションIDが取得できませんでした');
+      }
+
+      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+      if (stripe) {
+        const result = await stripe.redirectToCheckout({
+          sessionId: sessionId
+        });
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
+      } else {
+        throw new Error('Stripeの初期化に失敗しました');
+      }
     } catch (error) {
-      console.error('予約の削除中にエラーが発生しました:', error);
-      alert('予約の削除中にエラーが発生しました。もう一度お試しください。');
+      console.error('チェックアウトセッションの作成中にエラーが発生しました:', error);
+      alert('予約処理中にエラーが発生しました。もう一度お試しください。');
     }
   };
 
@@ -1209,7 +1271,7 @@ export default function PropertyDetail() {
                             <li key={index}>{spot}</li>
                           ))
                         ) : (
-                          <li>近隣の観光スポット情報はありません</li>
+                          <li>���隣の観光スポット情報はありません</li>
                         )}
                       </ul>
                     </Paper>
@@ -1406,7 +1468,7 @@ export default function PropertyDetail() {
                 <Button
                   variant="contained"
                   color="primary"
-                  onClick={() => setIsBookingDialogOpen(true)}
+                  onClick={handleBooking}
                   disabled={!selectedStartDate || !selectedEndDate}
                 >
                   予約する
@@ -1415,14 +1477,6 @@ export default function PropertyDetail() {
             </Grid>
           </section>
 
-          <BookingDialog
-            open={isBookingDialogOpen}
-            onClose={() => setIsBookingDialogOpen(false)}
-            onSubmit={handleBookingSubmit}
-            startDate={selectedStartDate}
-            endDate={selectedEndDate}
-          />
-
           {isAdmin && (
             <section className="mb-8 bg-gray-100 p-6 rounded-lg">
               <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
@@ -1430,34 +1484,22 @@ export default function PropertyDetail() {
               </Typography>
 
               <Paper className="p-4 bg-white shadow-md mb-4">
-                <Typography variant="h5" className="mb-4 font-semibold">予約済みゲスト一覧</Typography>
+                <Typography variant="h5" className="mb-2 font-semibold">予約済みゲスト一覧</Typography>
                 {bookings.length > 0 ? (
-                  <ul className="divide-y divide-gray-200">
+                  <ul>
                     {bookings.map((booking) => (
-                      <li key={booking.id} className="py-4 flex justify-between items-center">
-                        <div>
-                          <Typography variant="subtitle1" className="font-semibold">
-                            {booking.guestName} ({booking.guestEmail})
-                          </Typography>
-                          <Typography variant="body2" className="text-gray-600">
-                            {new Date(booking.startDate.seconds * 1000).toLocaleDateString('ja-JP')} から
-                            {new Date(booking.endDate.seconds * 1000).toLocaleDateString('ja-JP')} まで
-                          </Typography>
-                          <Chip
-                            label={booking.status}
-                            color={booking.status === 'confirmed' ? 'success' : 'warning'}
-                            size="small"
-                            className="mt-1"
-                          />
-                        </div>
+                      <li key={booking.id} className="mb-2 flex justify-between items-center">
+                        <Typography>
+                          {booking.guestName} ({booking.guestEmail}) - 
+                          {new Date(booking.startDate.seconds * 1000).toLocaleDateString('ja-JP')} から
+                          {new Date(booking.endDate.seconds * 1000).toLocaleDateString('ja-JP')} まで
+                          （ステータス: {booking.status}）
+                        </Typography>
                         <Button
                           variant="outlined"
-                          color="error"
+                          color="secondary"
+                          onClick={() => handleDeleteBooking(booking.id)}
                           startIcon={<FaTrash />}
-                          onClick={() => {
-                            setBookingToDelete(booking);
-                            setDeleteDialogOpen(true);
-                          }}
                         >
                           削除
                         </Button>
@@ -1506,31 +1548,6 @@ export default function PropertyDetail() {
               </Paper>
             </section>
           )}
-
-          {/* 予約削除確認ダイアログ */}
-          <Dialog
-            open={deleteDialogOpen}
-            onClose={() => setDeleteDialogOpen(false)}
-          >
-            <DialogTitle>予約削除の確認</DialogTitle>
-            <DialogContent>
-              <DialogContentText>
-                以下の予約を削除してもよろしいですか？
-                <br />
-                ゲスト名: {bookingToDelete?.guestName}
-                <br />
-                期間: {bookingToDelete && `${new Date(bookingToDelete.startDate.seconds * 1000).toLocaleDateString('ja-JP')} から ${new Date(bookingToDelete.endDate.seconds * 1000).toLocaleDateString('ja-JP')}`}
-              </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDeleteDialogOpen(false)} color="primary">
-                キャンセル
-              </Button>
-              <Button onClick={handleDeleteBooking} color="error" variant="contained">
-                削除
-              </Button>
-            </DialogActions>
-          </Dialog>
 
         </Container>
       </div>
