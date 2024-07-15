@@ -6,10 +6,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Layout from '../components/Layout'; // Layout component imported
 import { FaSearch, FaHome, FaChartLine, FaBriefcase, FaUsers, FaLaptop, FaPaintBrush, FaHandsHelping } from 'react-icons/fa';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import type { ComponentType } from 'react';
+import { YouTubeEvent } from 'react-youtube';
+
+const YouTube = dynamic(() => import('react-youtube') as Promise<{ default: ComponentType<any> }>, { ssr: false });
 
 const images = [
   'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fd46e0678579e6790a7f86931b0fa1478.webp?alt=media&token=dbe025fd-1004-4637-bc06-a3f3c7031d7d',
@@ -37,6 +41,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('all');
   const [showNewsletter, setShowNewsletter] = useState(false);
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
+  const playerRef = useRef<YouTubeEvent | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -79,17 +84,33 @@ export default function Home() {
         <Head>
           <title>イネブラ（Enabler） - 民泊・簡易宿泊事業のデジタル化と空間プロデュース</title>
           <meta name="description" content="イネブラは、民泊・簡易宿泊事業のデジタル化と空間プロデュースを行う企業です。物件管理、デジタル化支援、空間デザイン、運営サポートなど、幅広いサービスを提供しています。" />
-          <meta name="keywords" content="民泊, 簡易宿泊, デジタル化, 空間プロデュース, 物件管理, イネブラ, Enabler" />
+          <meta name="keywords" content="民泊, ���易宿泊, デジタル化, 空間プロデュース, 物件管理, ネブラ, Enabler" />
         </Head>
         <main className="bg-white text-gray-900 flex-grow">
           <section className="relative h-screen flex items-center justify-center bg-cover bg-center transition-all duration-1000 ease-in-out">
-            <Image 
-              src={images[currentImageIndex]} 
-              alt="ヒーロー画像" 
-              layout="fill" 
-              objectFit="cover" 
-              priority
-            />
+            <div className="absolute inset-0 overflow-hidden">
+              <YouTube
+                videoId="iZO6LZ_7FtI"
+                opts={{
+                  playerVars: {
+                    autoplay: 1,
+                    controls: 0,
+                    rel: 0,
+                    showinfo: 0,
+                    mute: 1,
+                    loop: 1,
+                    playlist: 'iZO6LZ_7FtI',
+                  },
+                }}
+                onReady={(event: YouTubeEvent) => {
+                  playerRef.current = event;
+                  event.target.mute();
+                }}
+                className="absolute top-0 left-0 w-full h-full"
+                containerClassName="absolute top-0 left-0 w-full h-full"
+                iframeClassName="w-full h-full object-cover"
+              />
+            </div>
             <div className="absolute inset-0 bg-black opacity-50"></div>
             <div className="relative z-10 text-center text-white px-4">
               <h1 className="text-5xl md:text-6xl font-bold mb-4">イネブラ（Enabler）</h1>
@@ -139,7 +160,7 @@ export default function Home() {
           </section>
 
           <section className="py-16 px-4 bg-gray-50">
-            <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">イネブラのサービス</h2>
+            <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">イブラのサービス</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
               {[
                 { name: '物件管理', icon: FaHome, description: '効率的な物件管理システムで、オーナー様の負担を軽減します。' },
@@ -169,7 +190,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <div className="bg-gray-50 p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-semibold mb-4">豊富な経験</h3>
-                <p className="text-gray-600">多数の物件管理実績と、業界をリードする専門知識を持つ経豊富なチーム</p>
+                <p className="text-gray-600">多数の物件管理実績と、業界をリードする専門知識を持つ経豊富なチー</p>
               </div>
               <div className="bg-gray-50 p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-semibold mb-4">革新的なテクノロジー</h3>
@@ -187,7 +208,7 @@ export default function Home() {
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <p className="text-gray-600 mb-4">&quot;イネブラのサービスのおかげで、物件の稼働率が大幅に向上しました。プロフェッショナルなサポートに感謝しています。&quot;</p>
-                <p className="font-semibold">田中 様 - 東京都内の物件オーナー</p>
+                <p className="font-semibold">中 様 - 東京都内の物件オーナー</p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <p className="text-gray-600 mb-4">&quot;デジタル化支援により、予約管理が格段に楽になりました。顧客満足度も上がり、リピーターが増えています。&quot;</p>
@@ -211,12 +232,12 @@ export default function Home() {
               <div className="bg-white bg-opacity-20 p-6 rounded-lg backdrop-filter backdrop-blur-lg">
                 <FaLaptop className="text-4xl mb-4" />
                 <h3 className="text-xl font-semibold mb-2">デジタル化支援</h3>
-                <p>最新のテクノロジーを導入し、運営の効率化と顧客体験の向上を実現します。</p>
+                <p>最新のテクノロジーを導入し、運営の効率化と顧客体���の向上を実現します。</p>
               </div>
               <div className="bg-white bg-opacity-20 p-6 rounded-lg backdrop-filter backdrop-blur-lg">
                 <FaPaintBrush className="text-4xl mb-4" />
                 <h3 className="text-xl font-semibold mb-2">空間デザイン</h3>
-                <p>魅力的で機能的な空間づくりで、宿泊者の満足度を高めます。</p>
+                <p>魅力的で機能的な空間づくりで、宿泊者の満度を高めます。</p>
               </div>
             </div>
           </section>
@@ -232,7 +253,7 @@ export default function Home() {
               </div>
               <div className="bg-gray-100 p-8 rounded-lg shadow-md relative">
                 <Image src="/images/testimonial-2.jpg" alt="鈴木 花子" width={80} height={80} className="rounded-full absolute -top-4 -left-4 border-4 border-white" />
-                <p className="mb-4 italic">&ldquo;イネブラの空間デザインサービスを利用して、古い町家を素敵な宿泊施設にリノベーションできました。予約が殺到するほどの人気物件になりました。&rdquo;</p>
+                <p className="mb-4 italic">&ldquo;イネブラの空間デザインサービス利用して、古い町家を素敵な宿泊施設にリノベーションできました。予約が殺到するほどの人気物件になりました。&rdquo;</p>
                 <p className="font-semibold">- 鈴木 花子, 38歳</p>
                 <p className="text-sm text-gray-600">町家オーナー</p>
               </div>
@@ -258,7 +279,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center justify-between">
                   <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300">
-                    送信する
+                    ��信する
                   </button>
                 </div>
               </form>

@@ -34,10 +34,24 @@ export default function AboutPage() {
             <h2 className="text-4xl font-bold mb-12 text-center">Our Mission & Vision</h2>
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div className="md:w-1/2 mb-8 md:mb-0">
+                <Image
+                  src="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Faf0b1d14cc9f3301a4ce361af62c2cf3.webp?alt=media&token=f039852a-c1f3-4d0d-a9a8-c6b43825a994"
+                  alt="ミッションイメージ"
+                  width={500}
+                  height={300}
+                  className="rounded-lg shadow-lg mb-4"
+                />
                 <h3 className="text-3xl font-semibold mb-4">Mission</h3>
                 <p className="text-xl leading-relaxed">宿泊事業者の可能性を最大限に引き出し、デジタル化と空間プロデュースを通じて、魅力的な宿泊体験を創出します。私たちは、宿泊産業の発展に貢献し、旅行者と地域社会に新たな価値を提供します。</p>
               </div>
               <div className="md:w-1/2 md:pl-12">
+                <Image
+                  src="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fc1bdd6a6a4d55cad234259acffc35d69.webp?alt=media&token=2556ec8f-4039-402a-aeec-defded250eb3"
+                  alt="ビジョンイメージ"
+                  width={500}
+                  height={300}
+                  className="rounded-lg shadow-lg mb-4"
+                />
                 <h3 className="text-3xl font-semibold mb-4">Vision</h3>
                 <p className="text-xl leading-relaxed">すべての宿泊施設が、テクノロジーと空間デザインの力を最大限に活用できる世界を目指します。イネブラを通じて、宿泊事業者が成功を収め、旅行者に忘れられない体験を提供し続けます。</p>
               </div>
@@ -85,10 +99,24 @@ export default function AboutPage() {
             <h2 className="text-4xl font-bold mb-12 text-center">お客様の声</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="bg-white p-6 rounded-lg shadow-md">
+                <Image
+                  src="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Ffdd5c8d3e1c89b2e4a6558a601f43513.webp?alt=media&token=801885fc-1690-499a-8cf3-6ff52d2d2143"
+                  alt="お客様の声1"
+                  width={400}
+                  height={300}
+                  className="rounded-lg mb-4"
+                />
                 <h3 className="text-2xl font-semibold mb-4">「イネブラのおかげで、宿泊施設の運営が劇的に改善しました」</h3>
                 <p className="text-lg">イネブラの物件管理システムを導入してから、予約管理や収益分析が格段に効率化されました。デジタル化支援のおかげで、スタッフの業務負担も大幅に軽減されています。</p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
+                <Image
+                  src="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Ff4b8b1ee4a3282c4aa5e7bd04260ecc5.jpg?alt=media&token=fe806759-95ee-433a-a61b-af79559b299b"
+                  alt="お客様の声2"
+                  width={400}
+                  height={300}
+                  className="rounded-lg mb-4"
+                />
                 <h3 className="text-2xl font-semibold mb-4">「空間デザインで、宿泊者の満足度が向上しました」</h3>
                 <p className="text-lg">イネブラの空間デザインサービスを利用して、宿泊施設の内装を一新しました。その結果、宿泊者からの評価が大幅に上がり、リピーター率も増加しています。</p>
               </div>
@@ -96,10 +124,18 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="py-20">
-          <div className="container mx-auto px-4">
-            <h2 className="text-4xl font-bold mb-12 text-center">お問い合わせ</h2>
-            <form className="max-w-lg mx-auto">
+        <section className="py-20 relative">
+          <Image
+            src="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fc67e975008be54e3fdc85c925333c7a2.webp?alt=media&token=2593548c-9dde-4c14-963a-c3eef5485cd8"
+            alt="お問い合わせ背景"
+            layout="fill"
+            objectFit="cover"
+            quality={100}
+          />
+          <div className="absolute inset-0 bg-black opacity-50"></div>
+          <div className="container mx-auto px-4 relative z-10">
+            <h2 className="text-4xl font-bold mb-12 text-center text-white">お問い合わせ</h2>
+            <form className="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-lg">
               <div className="mb-4">
                 <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
                   名前
@@ -158,7 +194,7 @@ export default function AboutPage() {
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-4xl font-bold mb-8">会社情報</h2>
             <p className="text-xl mb-4">株式会社イネブラ</p>
-            <p className="text-lg mb-2">代表取締役：Enabler 濱田優貴</p>
+            <p className="text-lg mb-2">濱田優貴</p>
             <p className="text-lg mb-4">所在地：東京都千代田区九段南１丁目６−５ 九段会館テラス ２F</p>
           </div>
         </section>
