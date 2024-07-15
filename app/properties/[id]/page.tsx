@@ -13,7 +13,6 @@ import { MdEdit as EditIcon, MdSave as SaveIcon, MdCancel as CancelIcon, MdDelet
 import { Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../../lib/firebase';
-import Script from 'next/script';
 import MapComponent from '../../../components/MapComponent';
 import Calendar from '../../../components/Calendar';
 import { SelectChangeEvent } from '@mui/material/Select';
@@ -269,7 +268,6 @@ export default function PropertyDetail() {
   const [isRealTimeUpdating, setIsRealTimeUpdating] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
   const [user, userLoading, userError] = useAuthState(auth);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUsers, setAdminUsers] = useState<string[]>([]);
@@ -291,6 +289,20 @@ export default function PropertyDetail() {
   const [guestEmail, setGuestEmail] = useState('');
   const [icalData, setIcalData] = useState('');
   const [parsedEvents, setParsedEvents] = useState<{ start: Date; end: Date; title: string }[]>([]);
+  const [mapsLoaded, setMapsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!window.google) {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => setMapsLoaded(true);
+      document.head.appendChild(script);
+    } else {
+      setMapsLoaded(true);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -870,10 +882,6 @@ export default function PropertyDetail() {
 
   return (
     <Layout>
-      <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
-        onLoad={() => setScriptLoaded(true)}
-      />
       <div className="bg-gray-100 min-h-screen relative">
         <Container maxWidth="lg" className="py-16">
           {/* 編集ボタンを右上に固定 */}
@@ -1142,7 +1150,7 @@ export default function PropertyDetail() {
             {isEditing ? (
               <div>
                 <Typography variant="subtitle1" className="mb-2">
-                  周辺施設（タイプ,名前,距離km）を入力してください。各施設を新しい行に入力��ます。
+                  周辺施設（タイプ,名前,距離km）を入力してください。各施設を新しい行に入力ます。
                 </Typography>
                 <TextareaAutosize
                   minRows={6}
@@ -1417,7 +1425,7 @@ export default function PropertyDetail() {
                             <li key={index}>{item}</li>
                           ))
                         ) : (
-                          <li>主設備・家具報はありません</li>
+                          <li>主設備・家具報はあ��ません</li>
                         )}
                       </ul>
                     </Paper>
@@ -1511,7 +1519,7 @@ export default function PropertyDetail() {
                 />
               </>
             ) : (
-              property.latitude && property.longitude && scriptLoaded ? (
+              property.latitude && property.longitude && mapsLoaded ? (
                 <MapComponent 
                   lat={property.latitude} 
                   lng={property.longitude} 
@@ -1538,21 +1546,23 @@ export default function PropertyDetail() {
             </section>
           )}
 
-          <section className="mb-8">
-            <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
-              <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約カレンダー
-            </Typography>
-            <Calendar 
-              events={calendarEvents}
-              currentMonth={currentMonth}
-              onMonthChange={handleMonthChange}
-              onDateClick={handleDateClick}
-              selectedStartDate={selectedStartDate ? new Date(selectedStartDate) : null}
-              selectedEndDate={selectedEndDate ? new Date(selectedEndDate) : null}
-              unavailableDates={[]}
-              maxStayDays={30}
-            />
-          </section>
+          {calendarEvents.length > 0 ? (
+            <section className="mb-8">
+              <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
+                <FaCalendarAlt className="mr-2 text-indigo-600" /> 予約カレンダー
+              </Typography>
+              <Calendar 
+                events={calendarEvents}
+                currentMonth={currentMonth}
+                onMonthChange={handleMonthChange}
+                onDateClick={handleDateClick}
+                selectedStartDate={selectedStartDate ? new Date(selectedStartDate) : null}
+                selectedEndDate={selectedEndDate ? new Date(selectedEndDate) : null}
+                unavailableDates={[]}
+                maxStayDays={30}
+              />
+            </section>
+          ) : null}
 
           <section className="mb-8">
             <Typography variant="h4" className="mb-4 font-semibold text-gray-800 flex items-center">
@@ -1717,7 +1727,7 @@ export default function PropertyDetail() {
                 合計金額：¥{property.price ? (property.price * (new Date(selectedEndDate).getTime() - new Date(selectedStartDate).getTime()) / (1000 * 60 * 60 * 24)).toLocaleString() : '価格はお問い合わせください'}
               </Typography>
               <Button variant="contained" color="primary" onClick={handleSubmitBooking}>
-                予する
+                ���約する
               </Button>
             </Paper>
           )}
