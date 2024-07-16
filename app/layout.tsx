@@ -1,12 +1,9 @@
+
 import '@/app/globals.css'
 import { ReactNode } from 'react';
 import { UserProvider } from '@auth0/nextjs-auth0/client';
 
-interface AdminLayoutProps {
-  children: ReactNode;
-}
-
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja">
       <head />
@@ -16,4 +13,3 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     </html>
   )
 }
-export default AdminLayout;

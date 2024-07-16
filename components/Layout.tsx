@@ -45,7 +45,8 @@ export default function Layout({ children }: { children: ReactNode }) {
         <nav className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <Link href="/" className="text-2xl font-bold text-blue-600 flex items-center">
-              <span className="mr-2">🏠</span> イネブラ
+              <img src="/favicon.svg" alt="イネブラロゴ" className="w-8 h-8 mr-2" />
+              イネブラ
             </Link>
             <div className="hidden md:flex space-x-6">
               <Link href="/" className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">

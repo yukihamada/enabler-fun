@@ -286,43 +286,6 @@ export default function Home() {
             </div>
           </section>
         </main>
-        <footer className="bg-gray-800 text-white py-12">
-          <div className="max-w-6xl mx-auto px-4">
-            <div className="grid md:grid-cols-4 gap-8">
-              <div>
-                <h3 className="text-xl font-semibold mb-4">イネブラ（Enabler）</h3>
-                <p>民泊・簡易宿泊事業のデジタル化と空間プロデュースのパイオニア</p>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-4">サービス</h3>
-                <ul>
-                  <li><Link href="/services#property-management">物件管理</Link></li>
-                  <li><Link href="/services#digitalization">デジタル化支援</Link></li>
-                  <li><Link href="/services#space-design">空間デザイン</Link></li>
-                  <li><Link href="/services#operation-support">運営サポート</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-4">会社情報</h3>
-                <ul>
-                  <li><Link href="/about">会社概要</Link></li>
-                  <li><Link href="/team">チーム</Link></li>
-                  <li><Link href="/careers">採用情報</Link></li>
-                  <li><Link href="/news">ニュース</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-4">お問い合わせ</h3>
-                <p>〒123-4567<br />東京都渋谷区○○1-2-3</p>
-                <p>TEL: 03-1234-5678</p>
-                <p>Email: info@enabler.co.jp</p>
-              </div>
-            </div>
-            <div className="mt-8 pt-8 border-t border-gray-700 text-center">
-              <p>&copy; 2024 イ��ブラ（Enabler）. All rights reserved.</p>
-            </div>
-          </div>
-        </footer>
       </div>
       {showNewsletter && (
         <div className="fixed bottom-0 left-0 right-0 bg-blue-600 text-white p-4">
