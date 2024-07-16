@@ -84,11 +84,11 @@ export default function Home() {
         <Head>
           <title>イネブラ（Enabler） - 民泊・簡易宿泊事業のデジタル化と空間プロデュース</title>
           <meta name="description" content="イネブラは、民泊・簡易宿泊事業のデジタル化と空間プロデュースを行う企業です。物件管理、デジタル化支援、空間デザイン、運営サポートなど、幅広いサービスを提供しています。" />
-          <meta name="keywords" content="民泊, ���易宿泊, デジタル化, 空間プロデュース, 物件管理, ネブラ, Enabler" />
+          <meta name="keywords" content="民泊, 易宿泊, デジタル化, 空間プロデュース, 物件管理, ネブラ, Enabler" />
         </Head>
         <main className="bg-white text-gray-900 flex-grow">
-          <section className="relative h-screen flex items-center justify-center bg-cover bg-center transition-all duration-1000 ease-in-out">
-            <div className="absolute inset-0 overflow-hidden">
+          <section className="relative h-screen flex items-center justify-center bg-cover bg-center transition-all duration-1000 ease-in-out overflow-hidden">
+            <div className="absolute inset-0">
               <YouTube
                 videoId="iZO6LZ_7FtI"
                 opts={{
@@ -106,8 +106,8 @@ export default function Home() {
                   playerRef.current = event;
                   event.target.mute();
                 }}
-                className="absolute top-0 left-0 w-full h-full"
-                containerClassName="absolute top-0 left-0 w-full h-full"
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-screen h-screen"
+                containerClassName="absolute inset-0 w-full h-full"
                 iframeClassName="w-full h-full object-cover"
               />
             </div>
@@ -207,7 +207,7 @@ export default function Home() {
             <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">お客様の声</h2>
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <p className="text-gray-600 mb-4">&quot;イネブラのサービスのおかげで、物件の稼働率が大幅に向上しました。プロフェッショナルなサポートに感謝しています。&quot;</p>
+                <p className="text-gray-600 mb-4">&quot;イネブラのサービスのおかげで、物件の稼働率が大幅に向上し���した。プロフェッショナルなサポートに感謝しています。&quot;</p>
                 <p className="font-semibold">中 様 - 東京都内の物件オーナー</p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
@@ -232,7 +232,7 @@ export default function Home() {
               <div className="bg-white bg-opacity-20 p-6 rounded-lg backdrop-filter backdrop-blur-lg">
                 <FaLaptop className="text-4xl mb-4" />
                 <h3 className="text-xl font-semibold mb-2">デジタル化支援</h3>
-                <p>最新のテクノロジーを導入し、運営の効率化と顧客体���の向上を実現します。</p>
+                <p>最新のテクノロジーを導入し、運営の効率化と顧客体の向上を実現します。</p>
               </div>
               <div className="bg-white bg-opacity-20 p-6 rounded-lg backdrop-filter backdrop-blur-lg">
                 <FaPaintBrush className="text-4xl mb-4" />
@@ -279,7 +279,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center justify-between">
                   <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300">
-                    ��信する
+                    信する
                   </button>
                 </div>
               </form>
@@ -319,7 +319,7 @@ export default function Home() {
               </div>
             </div>
             <div className="mt-8 pt-8 border-t border-gray-700 text-center">
-              <p>&copy; 2024 イネブラ（Enabler）. All rights reserved.</p>
+              <p>&copy; 2024 イ��ブラ（Enabler）. All rights reserved.</p>
             </div>
           </div>
         </footer>

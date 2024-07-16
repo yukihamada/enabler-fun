@@ -1,13 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
 import Image from 'next/image';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { FaBed, FaBath, FaRulerCombined, FaYenSign } from 'react-icons/fa';
-import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import { useRouter } from 'next/navigation';
 
 interface Property {
@@ -23,6 +22,11 @@ interface Property {
   amenities: string[];
   latitude: number;
   longitude: number;
+  nearbyFacilities?: Array<{
+    type: string;
+    name: string;
+    distance?: string;
+  }>;
 }
 
 const mapContainerStyle = {
@@ -38,10 +42,8 @@ const center = {
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [mapProperties, setMapProperties] = useState<Property[]>([]);
+  const mapRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // ログイン状態を追加
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -54,26 +56,51 @@ export default function PropertiesPage() {
         } as Property));
         setProperties(propertiesList);
         setMapProperties(propertiesList.filter(p => p.latitude && p.longitude));
-        setIsLoaded(true);
-
       } catch (error) {
         console.error('物件の取得に失敗しました:', error);
-        setIsLoaded(true);
       }
     };
 
     fetchProperties();
-    // ここでログイン状態を確認する処理を追加（例：Firebaseの認証状態を確認）
-    // setIsLoggedIn(true); // 仮にログイン状態をtrueに設定
-
-    return () => {
-      setIsLoaded(false);
-    };
   }, []);
 
-  const handleMarkerClick = (propertyId: string) => {
-    router.push(`/properties/${propertyId}`);
-  };
+  useEffect(() => {
+    const loadGoogleMapsAPI = () => {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeMap;
+      document.head.appendChild(script);
+    };
+
+    const initializeMap = () => {
+      if (!mapRef.current || mapProperties.length === 0) return;
+
+      const map = new google.maps.Map(mapRef.current, {
+        center,
+        zoom: 10,
+      });
+
+      mapProperties.forEach((property) => {
+        const marker = new google.maps.Marker({
+          position: { lat: property.latitude, lng: property.longitude },
+          map: map,
+          title: property.title,
+        });
+
+        marker.addListener('click', () => {
+          router.push(`/properties/${property.id}`);
+        });
+      });
+    };
+
+    if (typeof window.google === 'undefined') {
+      loadGoogleMapsAPI();
+    } else {
+      initializeMap();
+    }
+  }, [mapProperties, router]);
 
   return (
     <Layout>
@@ -84,49 +111,22 @@ export default function PropertiesPage() {
           {/* 地図セクション */}
           <div className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-gray-800">物件マップ</h2>
-            <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
-              <GoogleMap
-                mapContainerStyle={mapContainerStyle}
-                center={center}
-                zoom={10}
-              >
-                {mapProperties.map((property) => (
-                  <Marker
-                    key={property.id}
-                    position={{ lat: property.latitude!, lng: property.longitude! }}
-                    onClick={() => handleMarkerClick(property.id)}
-                  />
-                ))}
-              </GoogleMap>
-            </LoadScript>
+            <div ref={mapRef} style={mapContainerStyle}></div>
           </div>
 
           {/* 物件リストセクション */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {properties.map((property) => (
-              <PropertyCard 
-                key={property.id} 
-                property={property} 
-                isLoggedIn={isLoggedIn}
-              />
+              <PropertyCard key={property.id} property={property} />
             ))}
           </div>
-
-          {!isLoggedIn && (
-            <div className="mt-8 text-center">
-              <p className="text-gray-600 mb-4">会員登録すると、さらに多くの特別な物件をご覧いただけます。</p>
-              <Link href="/register" className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition-colors">
-                会員登録する
-              </Link>
-            </div>
-          )}
         </div>
       </div>
     </Layout>
   );
 }
 
-function PropertyCard({ property, isLoggedIn }: { property: Property; isLoggedIn: boolean }) {
+function PropertyCard({ property }: { property: Property }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // URLの妥当性をチェックする関数
@@ -158,19 +158,10 @@ function PropertyCard({ property, isLoggedIn }: { property: Property; isLoggedIn
     ? property.amenities
     : (property.amenities as string)?.split(',').map(item => item.trim()) || [];
 
-  if (property.id === 'member-only' && !isLoggedIn) {
-    return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
-        <div className="p-6">
-          <h2 className="text-2xl font-semibold mb-2 text-indigo-600">会員限定物件</h2>
-          <p className="text-gray-600 mb-4">この特別な物件は会員の方のみご覧いただけます。</p>
-          <Link href="/signup" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
-            会員登録して詳細を見る
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  // nearbyFacilitiesの処理を追加
+  const nearbyFacilities = Array.isArray(property.nearbyFacilities)
+    ? property.nearbyFacilities
+    : [];
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer">
@@ -226,6 +217,19 @@ function PropertyCard({ property, isLoggedIn }: { property: Property; isLoggedIn
               </span>
             )}
           </div>
+
+          {nearbyFacilities.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-lg font-semibold mb-2">周辺施設</h3>
+              <ul className="list-disc list-inside">
+                {nearbyFacilities.map((facility, index) => (
+                  <li key={index}>
+                    {facility.type}: {facility.name} ({facility.distance || '距離不明'})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </Link>
     </div>

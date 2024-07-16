@@ -4,18 +4,13 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { ReactNode } from 'react';
 import { FaHome, FaBuilding, FaSignInAlt, FaUserPlus, FaUser, FaCog, FaSignOutAlt, FaInfoCircle, FaEnvelope } from 'react-icons/fa';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth';
-import { auth } from '../lib/firebase'; // Firebaseの設定をインポート
+import { useUser } from '@auth0/nextjs-auth0/client';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const { user, error, isLoading } = useUser();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-
     // Difyチャットボットの設定を追加
     window.difyChatbotConfig = {
       token: 'rRgbpHRNzLM5fZfn'
@@ -41,13 +36,8 @@ export default function Layout({ children }: { children: ReactNode }) {
     return () => {
       document.body.removeChild(script);
       document.head.removeChild(style);
-      unsubscribe();
     };
   }, []);
-
-  const handleSignOut = async () => {
-    await signOut(auth);
-  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -78,16 +68,16 @@ export default function Layout({ children }: { children: ReactNode }) {
                   <Link href="/settings" className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">
                     <FaCog className="mr-1" /> 設定
                   </Link>
-                  <button onClick={handleSignOut} className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">
+                  <Link href="/api/auth/logout" className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">
                     <FaSignOutAlt className="mr-1" /> ログアウト
-                  </button>
+                  </Link>
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">
+                  <Link href="/api/auth/login" className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">
                     <FaSignInAlt className="mr-1" /> ログイン
                   </Link>
-                  <Link href="/register" className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition duration-300 flex items-center">
+                  <Link href="/api/auth/login" className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition duration-300 flex items-center">
                     <FaUserPlus className="mr-1" /> 新規登録
                   </Link>
                 </>
@@ -121,16 +111,16 @@ export default function Layout({ children }: { children: ReactNode }) {
                   <Link href="/settings" className="block py-2 text-gray-600 hover:text-blue-600 flex items-center">
                     <FaCog className="mr-2" /> 設定
                   </Link>
-                  <button onClick={handleSignOut} className="block py-2 text-gray-600 hover:text-blue-600 flex items-center">
+                  <Link href="/api/auth/logout" className="block py-2 text-gray-600 hover:text-blue-600 flex items-center">
                     <FaSignOutAlt className="mr-2" /> ログアウト
-                  </button>
+                  </Link>
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="block py-2 text-gray-600 hover:text-blue-600 flex items-center">
+                  <Link href="/api/auth/login" className="block py-2 text-gray-600 hover:text-blue-600 flex items-center">
                     <FaSignInAlt className="mr-2" /> ログイン
                   </Link>
-                  <Link href="/register" className="block py-2 text-gray-600 hover:text-blue-600 flex items-center">
+                  <Link href="/api/auth/login" className="block py-2 text-gray-600 hover:text-blue-600 flex items-center">
                     <FaUserPlus className="mr-2" /> 新規登録
                   </Link>
                 </>

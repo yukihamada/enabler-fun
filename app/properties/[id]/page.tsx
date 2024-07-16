@@ -699,7 +699,7 @@ export default function PropertyDetail() {
       setSelectedEndDate('');
     } catch (error) {
       console.error('予約の作成中にエラが発生しました:', error);
-      alert('予約の成中にエラーがしました。もう一度お試しくだい。');
+      alert('予約の成中にエラーがしました。もう一度お試しくだい���');
     }
   };
 
@@ -1281,7 +1281,7 @@ export default function PropertyDetail() {
                         <span className="icon-wrapper">
                           <FaPaw />
                         </span>
-                        ペット
+                        ペ��ト
                       </Typography>
                       <Typography className="info-card-value">{property.petsAllowed ? '可' : '不可'}</Typography>
                     </Paper>
@@ -1425,7 +1425,7 @@ export default function PropertyDetail() {
                             <li key={index}>{item}</li>
                           ))
                         ) : (
-                          <li>主設備・家具報はあ��ません</li>
+                          <li>主設備・家具報はあません</li>
                         )}
                       </ul>
                     </Paper>
