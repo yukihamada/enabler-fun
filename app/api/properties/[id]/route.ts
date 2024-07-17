@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-const session = await getSession(request, NextResponse);
+    const session = await getSession();
     const userId = session?.user?.sub;
 
     if (!userId) {
@@ -17,7 +17,7 @@ const session = await getSession(request, NextResponse);
       return NextResponse.json({ error: 'Invalid Auth0 token' }, { status: 401 });
     }
 
-const propertyDoc = doc(db, 'properties', params.id);
+    const propertyDoc = doc(db, 'properties', params.id);
     const propertySnapshot = await getDoc(propertyDoc);
 
     if (!propertySnapshot.exists()) {
@@ -41,7 +41,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-const session = await getSession(request, NextResponse);
+    const session = await getSession();
     const userId = session?.user?.sub;
 
     if (!userId) {
@@ -76,6 +76,7 @@ const session = await getSession(request, NextResponse);
 
     await updateDoc(propertyDoc, {
       ...propertyData,
+      status: propertyData.status || 'draft', // 状態が指定されていない場合はデフォルトを使用
       updatedAt: serverTimestamp()
     });
 
@@ -95,6 +96,14 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getSession();
+    const userId = session?.user?.sub;
+
+    if (!userId) {
+      console.error('Auth0 token verification failed: User ID not found');
+      return NextResponse.json({ error: 'Invalid Auth0 token' }, { status: 401 });
+    }
+
     const propertyDoc = doc(db, 'properties', params.id);
     const propertySnapshot = await getDoc(propertyDoc);
 

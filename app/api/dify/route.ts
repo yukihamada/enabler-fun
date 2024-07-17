@@ -75,20 +75,12 @@ async function handlePropertyInfoQuery(params: any) {
   const propertyId = params.property_id;
 
   try {
-const session = await getSession(request, NextResponse);
+    const session = await getSession();
     const userId = session?.user?.sub;
 
     if (!userId) {
-      console.error('Auth0 token verification failed: User ID not found');
-      return NextResponse.json({ error: 'Invalid Auth0 token' }, { status: 401 });
-    }
-
-const session = await getSession(request, NextResponse);
-    const userId = session?.user?.sub;
-
-    if (!userId) {
-      console.error('Auth0 token verification failed: User ID not found');
-      return NextResponse.json({ error: 'Invalid Auth0 token' }, { status: 401 });
+      console.error('Auth0トークン検証失敗: ユーザーIDが見つかりません');
+      return NextResponse.json({ error: '無効なAuth0トークン' }, { status: 401 });
     }
 
     const propertyDoc = doc(db, 'properties', propertyId);
@@ -247,12 +239,12 @@ async function deleteProperty(req: NextRequest) {
     const propertySnapshot = await getDoc(propertyDoc);
 
     if (!propertySnapshot.exists()) {
-      return NextResponse.json({ error: '指定さ���た物件が見つかりません' }, { status: 404 });
+      return NextResponse.json({ error: '指定さた物件が見つかりません' }, { status: 404 });
     }
 
     await deleteDoc(propertyDoc);
 
-    return NextResponse.json({ message: '物件が削除されました' }, { status: 200 });
+    return NextResponse.json({ message: '物件��削除されました' }, { status: 200 });
   } catch (error) {
     return handleError(error);
   }

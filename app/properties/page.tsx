@@ -27,6 +27,7 @@ interface Property {
     name: string;
     distance?: string;
   }>;
+  status: string;
 }
 
 const mapContainerStyle = {
@@ -50,10 +51,12 @@ export default function PropertiesPage() {
       try {
         const propertiesCollection = collection(db, 'properties');
         const propertiesSnapshot = await getDocs(propertiesCollection);
-        const propertiesList = propertiesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Property));
+        const propertiesList = propertiesSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as Property))
+          .filter(property => property.status === 'published'); // 公開中の物件のみをフィルタリング
         setProperties(propertiesList);
         setMapProperties(propertiesList.filter(p => p.latitude && p.longitude));
       } catch (error) {

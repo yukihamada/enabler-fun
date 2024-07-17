@@ -10,11 +10,13 @@ export default function Login() {
   const router = useRouter()
 
   const handleGoogleLogin = () => {
-    router.push('/api/auth/login?connection=google-oauth2')
+    const callbackUrl = `${window.location.origin}/api/auth/callback`;
+    router.push(`/api/auth/login?connection=google-oauth2&redirect_uri=${encodeURIComponent(callbackUrl)}`);
   }
 
   const handleLineLogin = () => {
-    router.push('/api/auth/login?connection=line')
+    const callbackUrl = `${window.location.origin}/api/auth/callback`;
+    router.push(`/api/auth/login?connection=line&redirect_uri=${encodeURIComponent(callbackUrl)}`);
   }
 
   return (

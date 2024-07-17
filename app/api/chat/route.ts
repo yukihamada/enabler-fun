@@ -6,12 +6,12 @@ export async function POST(request: Request) {
     const { idToken } = await request.json();
 
     // Firebaseトークンを検証し、ユーザーIDを取得
-const session = await getSession(request, NextResponse);
+    const session = await getSession();
     const userId = session?.user?.sub;
 
     if (!userId) {
-      console.error('Firebase token verification failed: User ID not found');
-      return NextResponse.json({ error: 'Invalid Firebase token' }, { status: 401 });
+      console.error('Auth0トークン検証失敗: ユーザーIDが見つかりません');
+      return NextResponse.json({ error: '無効なAuth0トークン' }, { status: 401 });
     }
 
     // ここに残りのチャットロジックを実装

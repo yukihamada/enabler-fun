@@ -16,16 +16,16 @@ export async function GET(
   const token = searchParams.get('token');
 
   try {
-    // 物件ドキュメントからiCalURLを取得
-const session = await getSession(request, NextResponse);
+    // セッションを取得
+    const session = await getSession();
     const userId = session?.user?.sub;
 
     if (!userId) {
-      console.error('Auth0 token verification failed: User ID not found');
-      return NextResponse.json({ error: 'Invalid Auth0 token' }, { status: 401 });
+      console.error('Auth0トークン検証失敗: ユーザーIDが見つかりません');
+      return NextResponse.json({ error: '無効なAuth0トークン' }, { status: 401 });
     }
 
-const propertyRef = doc(db, 'properties', propertyId);
+    const propertyRef = doc(db, 'properties', propertyId);
     const propertyDoc = await getDoc(propertyRef);
 
     if (!propertyDoc.exists()) {

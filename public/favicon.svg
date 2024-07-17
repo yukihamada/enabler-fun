@@ -1,24 +1,59 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 62">
   <defs>
-    <linearGradient id="roofGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FF6B6B"/>
-      <stop offset="100%" style="stop-color:#D32F2F"/>
-    </linearGradient>
-    <linearGradient id="wallGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#FFF3E0"/>
-      <stop offset="100%" style="stop-color:#FFE0B2"/>
-    </linearGradient>
+    <style>
+      @keyframes doorSlide {
+        0%, 90%, 100% { transform: translateX(0); }
+        95% { transform: translateX(8px); }
+      }
+      @keyframes windowShine {
+        0%, 100% { opacity: 0; }
+        50% { opacity: 0.3; }
+      }
+      @keyframes smokeRise {
+        0% { transform: translateY(0) scale(1); opacity: 0; }
+        20% { opacity: 0.7; }
+        100% { transform: translateY(-15px) scale(1.5); opacity: 0; }
+      }
+      .door { animation: doorSlide 10s infinite; }
+      .window-shine { animation: windowShine 5s infinite; }
+      .smoke { animation: smokeRise 4s infinite; }
+    </style>
   </defs>
   
-  <!-- Walls -->
-  <rect x="4" y="14" width="24" height="16" fill="url(#wallGradient)" stroke="#E65100" stroke-width="1"/>
+  <!-- Main structure (adjusted for golden ratio) -->
+  <rect x="5" y="24" width="90" height="55.6" fill="#FFFFFF" stroke="#2C3E50" stroke-width="0.5"/>
+  
   <!-- Roof -->
-  <polygon points="2,14 16,2 30,14" fill="url(#roofGradient)" stroke="#B71C1C" stroke-width="1"/>
-  <!-- Door -->
-  <rect x="13" y="22" width="6" height="8" fill="#4CAF50" stroke="#2E7D32" stroke-width="1"/>
-  <circle cx="17" cy="26" r="0.5" fill="#FFC107"/>
-  <!-- Window -->
-  <rect x="6" y="17" width="6" height="6" fill="#BBDEFB" stroke="#1976D2" stroke-width="1"/>
-  <line x1="9" y1="17" x2="9" y2="23" stroke="#1976D2" stroke-width="1"/>
-  <line x1="6" y1="20" x2="12" y2="20" stroke="#1976D2" stroke-width="1"/>
+  <rect x="0" y="20" width="100" height="4" fill="#2C3E50" stroke="#2C3E50" stroke-width="0.5"/>
+  
+  <!-- Large window (floor-to-ceiling, adjusted for golden ratio) -->
+  <rect x="10" y="28" width="50" height="51.6" fill="#FFFFFF" stroke="#2C3E50" stroke-width="0.5"/>
+  <rect class="window-shine" x="10" y="28" width="50" height="51.6" fill="#2C3E50" opacity="0"/>
+  
+  <!-- Door (adjusted for golden ratio) with orange handle -->
+  <g class="door">
+    <rect x="65" y="41.5" width="20" height="32.7" fill="#FFFFFF" stroke="#2C3E50" stroke-width="0.5"/>
+    <!-- Door handle (positioned and sized according to golden ratio) -->
+    <rect x="80.65" y="57.4" width="1.2" height="1.94" fill="#FF6B6B" stroke="#2C3E50" stroke-width="0.2"/>
+  </g>
+  
+  <!-- Chimney (on the left side) -->
+  <rect x="8" y="15" width="4" height="9" fill="#2C3E50" stroke="#2C3E50" stroke-width="0.5"/>
+  <rect x="7" y="14" width="6" height="1" fill="#2C3E50" stroke="#2C3E50" stroke-width="0.5"/>
+  
+  <!-- Smoke (adjusted for chimney position) -->
+  <circle class="smoke" cx="10" cy="13" r="1" fill="#A9A9A9" opacity="0"/>
+  <circle class="smoke" cx="10" cy="13" r="1" fill="#A9A9A9" opacity="0" style="animation-delay: 1.3s"/>
+  <circle class="smoke" cx="10" cy="13" r="1" fill="#A9A9A9" opacity="0" style="animation-delay: 2.6s"/>
+  
+  <!-- Solar panels (enlarged and increased in number) -->
+  <g transform="rotate(5 95 24)">
+    <rect x="65" y="20" width="40" height="4" fill="#2C3E50" stroke="#2C3E50" stroke-width="0.3"/>
+    <line x1="75" y1="20" x2="75" y2="24" stroke="#FFFFFF" stroke-width="0.3"/>
+    <line x1="85" y1="20" x2="85" y2="24" stroke="#FFFFFF" stroke-width="0.3"/>
+    <line x1="95" y1="20" x2="95" y2="24" stroke="#FFFFFF" stroke-width="0.3"/>
+  </g>
+  
+  <!-- Orange accent (only at the bottom) -->
+  <rect x="5" y="77.6" width="90" height="2" fill="#FF6B6B"/>
 </svg>

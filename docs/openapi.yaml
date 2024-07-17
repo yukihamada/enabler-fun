@@ -23,6 +23,19 @@ paths:
             type: integer
             maximum: 100
             format: int32
+        - name: status
+          in: query
+          description: 物件のステータスでフィルタリング
+          required: false
+          schema:
+            type: string
+            enum: ["draft", "published", "unpublished", "under_review", "suspended"]
+        - name: keyword
+          in: query
+          description: タイトルまたは説明文で検索するキーワード
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: 民泊施設の配列
@@ -199,7 +212,7 @@ components:
         description:
           type: string
           example: "長い間探し続けた海沿いの一軒家が、ついに完成しました！"
-          description: "物件の詳細な説明"
+          description: "物件の詳細な説明（キーワード検索の対象）"
         imageUrls:
           type: array
           items:
@@ -268,7 +281,7 @@ components:
           type: string
           format: date
           example: "2023-07-01"
-          description: "予約可能開始日"
+          description: "予約可能開���日"
         availableTo:
           type: string
           format: date
@@ -307,6 +320,11 @@ components:
           type: string
           example: "11:00"
           description: "チェックアウト時間"
+        status:
+          type: string
+          enum: ["draft", "published", "unpublished", "under_review", "suspended"]
+          example: "published"
+          description: "物件の公開状態"
     PropertyInput:
       type: object
       required:
@@ -336,6 +354,7 @@ components:
           enum: ["全所有権", "共有持分", "区分所有"]
         description:
           type: string
+          description: "物件の詳細な説明（キーワード検索の対象）"
         imageUrls:
           type: array
           items:
@@ -400,6 +419,10 @@ components:
           type: string
         checkOutTime:
           type: string
+        status:
+          type: string
+          enum: ["draft", "published", "unpublished", "under_review", "suspended"]
+          description: "物件の公開状態"
     Properties:
       type: array
       maxItems: 100

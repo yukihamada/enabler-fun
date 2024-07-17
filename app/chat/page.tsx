@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getSession, useUser } from '@auth0/nextjs-auth0';
+import { useUser } from '@auth0/nextjs-auth0/client';
 import { getFirestore, collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { IoSend } from 'react-icons/io5';
 import styles from './Chat.module.css';
@@ -15,7 +15,7 @@ interface Message {
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-const { user, error, isLoading } = useUser();
+  const { user, error, isLoading } = useUser();
 
   useEffect(() => {
     if (user) {
@@ -52,7 +52,7 @@ const { user, error, isLoading } = useUser();
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await getSession().idToken}`
+          'Authorization': `Bearer ${user?.idToken}`
         },
         body: JSON.stringify({ message: input }),
       });
