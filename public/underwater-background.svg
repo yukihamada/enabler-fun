@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+
+  <defs>
+
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+
+      <stop offset="0%" style="stop-color:#ff9a9e;">
+
+        <animate attributeName="stop-color" values="#ff9a9e; #81ecec; #ffeaa7; #74b9ff; #a29bfe; #55efc4; #ff9a9e" dur="60s" repeatCount="indefinite" />
+
+      </stop>
+
+      <stop offset="100%" style="stop-color:#fad0c4;">
+
+        <animate attributeName="stop-color" values="#fad0c4; #74b9ff; #a29bfe; #55efc4; #ff9a9e; #81ecec; #fad0c4" dur="60s" repeatCount="indefinite" />
+
+      </stop>
+
+    </linearGradient>
+
+  </defs>
+
+  <rect width="800" height="400" fill="url(#grad1)" />
+
+  
+
+  <!-- メインの波 -->
+
+  <path d="M0 300 Q 200 200 400 300 T 800 300" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="5">
+
+    <animate attributeName="d" 
+
+             values="M0 300 Q 200 200 400 300 T 800 300;
+
+                     M0 310 Q 200 180 400 310 T 800 310;
+
+                     M0 290 Q 200 220 400 290 T 800 290;
+
+                     M0 300 Q 200 200 400 300 T 800 300" 
+
+             dur="40s" 
+
+             repeatCount="indefinite" 
+
+             calcMode="spline"
+
+             keySplines="0.5 0 0.5 1; 0.5 0 0.5 1; 0.5 0 0.5 1" />
+
+  </path>
+
+  <!-- 中間の波 -->
+
+  <path d="M0 320 Q 200 220 400 320 T 800 320" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="5">
+
+    <animate attributeName="d" 
+
+             values="M0 320 Q 200 220 400 320 T 800 320;
+
+                     M0 330 Q 200 200 400 330 T 800 330;
+
+                     M0 310 Q 200 240 400 310 T 800 310;
+
+                     M0 320 Q 200 220 400 320 T 800 320" 
+
+             dur="50s" 
+
+             repeatCount="indefinite" 
+
+             calcMode="spline"
+
+             keySplines="0.5 0 0.5 1; 0.5 0 0.5 1; 0.5 0 0.5 1" />
+
+  </path>
+
+  <!-- 後ろの波 -->
+
+  <path d="M0 340 Q 200 240 400 340 T 800 340" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="5">
+
+    <animate attributeName="d" 
+
+             values="M0 340 Q 200 240 400 340 T 800 340;
+
+                     M0 350 Q 200 260 400 350 T 800 350;
+
+                     M0 330 Q 200 220 400 330 T 800 330;
+
+                     M0 340 Q 200 240 400 340 T 800 340" 
+
+             dur="60s" 
+
+             repeatCount="indefinite" 
+
+             calcMode="spline"
+
+             keySplines="0.5 0 0.5 1; 0.5 0 0.5 1; 0.5 0 0.5 1" />
+
+  </path>
+
+  <!-- 浮遊する生き物のような要素 -->
+
+  <g>
+
+    <path d="M100 100 Q 110 90 120 100 T 140 100" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2">
+
+      <animateMotion path="M0 0 Q 30 -40 60 0 T 120 0" dur="20s" repeatCount="indefinite" />
+
+      <animate attributeName="d" 
+
+               values="M100 100 Q 110 90 120 100 T 140 100;
+
+                       M100 100 Q 110 110 120 100 T 140 100;
+
+                       M100 100 Q 110 90 120 100 T 140 100" 
+
+               dur="5s" 
+
+               repeatCount="indefinite" 
+
+               calcMode="spline"
+
+               keySplines="0.5 0 0.5 1; 0.5 0 0.5 1" />
+
+    </path>
+
+  </g>
+
+  <g>
+
+    <path d="M700 200 Q 710 190 720 200 T 740 200" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2">
+
+      <animateMotion path="M0 0 Q -40 30 0 60 T 0 120" dur="25s" repeatCount="indefinite" />
+
+      <animate attributeName="d" 
+
+               values="M700 200 Q 710 190 720 200 T 740 200;
+
+                       M700 200 Q 710 210 720 200 T 740 200;
+
+                       M700 200 Q 710 190 720 200 T 740 200" 
+
+               dur="6s" 
+
+               repeatCount="indefinite" 
+
+               calcMode="spline"
+
+               keySplines="0.5 0 0.5 1; 0.5 0 0.5 1" />
+
+    </path>
+
+  </g>
+
+</svg>

@@ -40,7 +40,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50 bg-underwater-pattern bg-cover bg-center">
       <header className="bg-white shadow-sm">
         <nav className="container mx-auto px-4 py-8">
           <div className="flex justify-between items-center">
@@ -137,7 +137,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <div className="flex flex-wrap justify-between">
             <div className="w-full md:w-1/4 mb-6 md:mb-0">
               <h3 className="text-xl font-semibold mb-4">イネブラ（Enabler）</h3>
-              <p>泊・簡易宿泊事業のデジタル化と空間プロデュースのパイオニア</p>
+              <p>民泊・簡易宿泊事業のデジタル化と空間プロデュースのパイオニア</p>
             </div>
             <div className="w-full md:w-1/4 mb-6 md:mb-0">
               <h3 className="text-xl font-semibold mb-4">リンク</h3>

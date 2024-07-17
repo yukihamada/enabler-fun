@@ -6,7 +6,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Loader from '../components/Loader';
 import '../admin.css';
-import { Button, TextField, Typography, Paper, Grid, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton } from '@mui/material';
+import { Button, TextField, Typography, Paper, Grid, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Select, MenuItem } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -16,6 +16,7 @@ import { db } from '../../../lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Timestamp } from 'firebase/firestore';
+import { updatePropertyStatus } from '../../../lib/propertyUtils'; // この行を追加
 
 interface Property {
   id: string;
@@ -24,6 +25,7 @@ interface Property {
   address: string;
   isPublished: boolean;
   createdAt?: Timestamp;
+  status: string;
 }
 
 interface NewProperty {
@@ -57,12 +59,15 @@ const requiredFields = [
   }
 ];
 
+const statusOptions = ['draft', 'review', 'published', 'archived', 'deleted'];
+
 const Properties = () => {
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [newProperty, setNewProperty] = useState<NewProperty>({ title: '', description: '', address: '', isPublished: true });
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [changingStatus, setChangingStatus] = useState<string | null>(null);
 
   const formatTimestamp = (timestamp: Timestamp | undefined) => {
     if (timestamp && timestamp instanceof Timestamp) {
@@ -84,7 +89,8 @@ const Properties = () => {
           description: data.description,
           address: data.address,
           isPublished: data.isPublished,
-          createdAt: data.createdAt
+          createdAt: data.createdAt,
+          status: data.status
         } as Property;
       });
       setProperties(propertiesList);
@@ -94,7 +100,7 @@ const Properties = () => {
       setLoading(false);
     });
 
-    // クリーンアップ関数
+    // クリーンアップ��数
     return () => unsubscribe();
   }, []);
 
@@ -109,7 +115,7 @@ const Properties = () => {
         alert('物件情報が正常に追加されました。');
       } catch (error: unknown) {
         console.error('物件の追加中にエラーが発生しました:', error);
-        alert(`物件��追加中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
+        alert(`物件追加中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
       } finally {
         setIsSubmitting(false);
       }
@@ -152,6 +158,20 @@ const Properties = () => {
   // 詳細ページへの遷移関数
   const navigateToDetail = (id: string) => {
     router.push(`/properties/${id}`);
+  };
+
+  const handleStatusChange = async (propertyId: string, newStatus: string) => {
+    setChangingStatus(propertyId);
+    try {
+      await updatePropertyStatus(propertyId, newStatus);
+      setProperties(properties.map(p => 
+        p.id === propertyId ? { ...p, status: newStatus } : p
+      ));
+    } catch (error) {
+      console.error('ステータス更新エラー:', error);
+    } finally {
+      setChangingStatus(null);
+    }
   };
 
   return (
@@ -215,9 +235,21 @@ const Properties = () => {
                         <>
                           {property.address}
                           <br />
-                          <Typography component="span" color={property.isPublished ? "success" : "error"}>
-                            {property.isPublished ? "掲載中" : "非掲載"}
-                          </Typography>
+                          ステータス: 
+                          <Select
+                            value={property.status}
+                            onChange={(e) => handleStatusChange(property.id, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            disabled={changingStatus === property.id}
+                            size="small"
+                            style={{ marginLeft: '10px', minWidth: '120px' }}
+                          >
+                            {statusOptions.map(status => (
+                              <MenuItem key={status} value={status}>
+                                {status}
+                              </MenuItem>
+                            ))}
+                          </Select>
                           {property.createdAt && (
                             <>
                               <br />
@@ -228,18 +260,6 @@ const Properties = () => {
                       } 
                     />
                     <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        aria-label="toggle-publish"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          togglePublishStatus(property.id, property.isPublished);
-                        }}
-                        disabled={isSubmitting}
-                        style={{ marginRight: '10px' }}
-                      >
-                        {property.isPublished ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                      </IconButton>
                       <IconButton
                         edge="end"
                         aria-label="delete"

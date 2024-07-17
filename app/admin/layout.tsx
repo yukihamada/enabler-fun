@@ -11,9 +11,7 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <>
-      <Header />
       <main>{children}</main>
-      <Footer />
     </>
   );
 };

@@ -8,7 +8,7 @@ import Layout from '../components/Layout'; // Layout component imported
 import { FaSearch, FaHome, FaChartLine, FaBriefcase, FaUsers, FaLaptop, FaPaintBrush, FaHandsHelping } from 'react-icons/fa';
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
-import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { ComponentType } from 'react';
 import { YouTubeEvent } from 'react-youtube';
@@ -34,6 +34,7 @@ interface Property {
   price: number;
   imageUrls: string[] | string;
   description: string;
+  status: string;
 }
 
 export default function Home() {
@@ -55,7 +56,11 @@ export default function Home() {
     const fetchFeaturedProperties = async () => {
       try {
         const propertiesCollection = collection(db, 'properties');
-        const propertiesQuery = query(propertiesCollection, limit(20)); // 20件取得して、その中からランダムに6件選ぶ
+        const propertiesQuery = query(
+          propertiesCollection,
+          where('status', '==', 'published'),
+          limit(20)
+        );
         const propertiesSnapshot = await getDocs(propertiesQuery);
         const propertiesList = propertiesSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -87,8 +92,8 @@ export default function Home() {
           <meta name="keywords" content="民泊, 易宿泊, デジタル化, 空間プロデュース, 物件管理, ネブラ, Enabler" />
         </Head>
         <main className="bg-white text-gray-900 flex-grow">
-          <section className="relative h-screen flex items-center justify-center bg-cover bg-center transition-all duration-1000 ease-in-out overflow-hidden">
-            <div className="absolute inset-0">
+          <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 w-full h-full">
               <YouTube
                 videoId="iZO6LZ_7FtI"
                 opts={{
@@ -106,9 +111,9 @@ export default function Home() {
                   playerRef.current = event;
                   event.target.mute();
                 }}
-                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-screen h-screen"
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[300%] h-[300%] min-w-full min-h-full object-cover"
                 containerClassName="absolute inset-0 w-full h-full"
-                iframeClassName="w-full h-full object-cover"
+                iframeClassName="w-full h-full"
               />
             </div>
             <div className="absolute inset-0 bg-black opacity-50"></div>
@@ -164,7 +169,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
               {[
                 { name: '物件管理', icon: FaHome, description: '効率的な物件管理システムで、オーナー様の負担を軽減します。' },
-                { name: 'デジタル化支援', icon: FaLaptop, description: '最新のテクノロジーを活用し、予約管理や顧客対応を効率化します。' },
+                { name: 'デジタル化支援', icon: FaLaptop, description: '最新のテクノロジを活用し、予約管理や顧客対応効率化します。' },
                 { name: '空間デザイン', icon: FaPaintBrush, description: '魅力的で快適な空間づくりで、宿泊者の満足度を高めます。' },
                 { name: '運営サポート', icon: FaHandsHelping, description: '法規制対応から集客まで、運営全般をサポートします。' }
               ].map((service) => (
@@ -190,10 +195,10 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <div className="bg-gray-50 p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-semibold mb-4">豊富な経験</h3>
-                <p className="text-gray-600">多数の物件管理実績と、業界をリードする専門知識を持つ経豊富なチー</p>
+                <p className="text-gray-600">多数の物件管理実績と、業界をリードする専門知識を持つ経豊富なチーム</p>
               </div>
               <div className="bg-gray-50 p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-semibold mb-4">革新的なテクノロジー</h3>
+                <h3 className="text-xl font-semibold mb-4">革新的なテクノロジ</h3>
                 <p className="text-gray-600">最新のデジタルツールとAIを活用し、効率的な運営と顧客満足度の向上を実現</p>
               </div>
               <div className="bg-gray-50 p-6 rounded-lg shadow-md">
@@ -207,11 +212,11 @@ export default function Home() {
             <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">お客様の声</h2>
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <p className="text-gray-600 mb-4">&quot;イネブラのサービスのおかげで、物件の稼働率が大幅に向上し���した。プロフェッショナルなサポートに感謝しています。&quot;</p>
+                <p className="text-gray-600 mb-4">&quot;イネブラのサービスのおかげで、物件の稼働率が大幅に向上しした。プロフェッショナルなサポートに感謝しています。&quot;</p>
                 <p className="font-semibold">中 様 - 東京都内の物件オーナー</p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <p className="text-gray-600 mb-4">&quot;デジタル化支援により、予約管理が格段に楽になりました。顧客満足度も上がり、リピーターが増えています。&quot;</p>
+                <p className="text-gray-600 mb-4">&quot;デジタル化支援により、��約管理が格段に楽になりました。顧客満足度も上がり、リピーターが増えています。&quot;</p>
                 <p className="font-semibold">佐藤 様 - 京都市内の町家オーナー</p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
@@ -222,22 +227,23 @@ export default function Home() {
           </section>
 
           <section className="py-16 px-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-            <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">イネブラ（Enabler）の強み</h2>
+            <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">民泊革命、デジタルで実現</h2>
+            <p className="text-xl text-center mb-8">イネブラが提供する次世代の宿泊体験</p>
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               <div className="bg-white bg-opacity-20 p-6 rounded-lg backdrop-filter backdrop-blur-lg">
-                <FaChartLine className="text-4xl mb-4" />
-                <h3 className="text-xl font-semibold mb-2">収益最大化</h3>
-                <p>データ分析と市場トレンドを活用し、物件の収益を最大化します。</p>
+                <FaLaptop className="text-4xl mb-4" />
+                <h3 className="text-xl font-semibold mb-2">スマート運営</h3>
+                <p>AIとIoTを活用した効率的な物件管理で、運営の手間を大幅に削減します。</p>
               </div>
               <div className="bg-white bg-opacity-20 p-6 rounded-lg backdrop-filter backdrop-blur-lg">
-                <FaLaptop className="text-4xl mb-4" />
-                <h3 className="text-xl font-semibold mb-2">デジタル化支援</h3>
-                <p>最新のテクノロジーを導入し、運営の効率化と顧客体の向上を実現します。</p>
+                <FaChartLine className="text-4xl mb-4" />
+                <h3 className="text-xl font-semibold mb-2">デジタル変革</h3>
+                <p>予約から決済まで、シームレスな顧客体験を提供し、満足度を向上させます。</p>
               </div>
               <div className="bg-white bg-opacity-20 p-6 rounded-lg backdrop-filter backdrop-blur-lg">
                 <FaPaintBrush className="text-4xl mb-4" />
                 <h3 className="text-xl font-semibold mb-2">空間デザイン</h3>
-                <p>魅力的で機能的な空間づくりで、宿泊者の満度を高めます。</p>
+                <p>快適さと魅力を両立する宿泊空間の創出で、滞在の質を高めます。</p>
               </div>
             </div>
           </section>
@@ -246,15 +252,15 @@ export default function Home() {
             <h2 className="text-3xl font-semibold mb-12 text-center">お客様の声</h2>
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               <div className="bg-gray-100 p-8 rounded-lg shadow-md relative">
-                <Image src="/images/testimonial-1.jpg" alt="山田 太郎" width={80} height={80} className="rounded-full absolute -top-4 -left-4 border-4 border-white" />
+                <Image src="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2F3f37b2c73ea7ad8ae0fe07b810a2fa42.png?alt=media&token=a9461102-e871-4a4c-81f4-f90481bc241a" alt="山田 太郎" width={80} height={80} className="rounded-full absolute -top-4 -left-4 border-4 border-white" />
                 <p className="mb-4 italic">&ldquo;イネブラのサポートのおかげで、私の物件の稼働率が大幅に向上しました。デジタルの導入も円滑で、運営の効率が格段に上がりました。&rdquo;</p>
-                <p className="font-semibold">- 山田 太郎, 45歳</p>
-                <p className="text-sm text-gray-600">アパートメント所有者</p>
+                <p className="font-semibold">- 山田 綾子, 25歳</p>
+                <p className="text-sm text-gray-600">一戸建て所有者</p>
               </div>
               <div className="bg-gray-100 p-8 rounded-lg shadow-md relative">
-                <Image src="/images/testimonial-2.jpg" alt="鈴木 花子" width={80} height={80} className="rounded-full absolute -top-4 -left-4 border-4 border-white" />
+                <Image src="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2F11e0dc1342153fd44cb5e1208ffefa5e.png?alt=media&token=7cfe0e58-3e71-45fd-85aa-cf3bf28e2ff9" alt="鈴木 花子" width={80} height={80} className="rounded-full absolute -top-4 -left-4 border-4 border-white" />
                 <p className="mb-4 italic">&ldquo;イネブラの空間デザインサービス利用して、古い町家を素敵な宿泊施設にリノベーションできました。予約が殺到するほどの人気物件になりました。&rdquo;</p>
-                <p className="font-semibold">- 鈴木 花子, 38歳</p>
+                <p className="font-semibold">- 鈴木 花子, 58歳</p>
                 <p className="text-sm text-gray-600">町家オーナー</p>
               </div>
             </div>
@@ -297,7 +303,7 @@ export default function Home() {
               className="px-4 py-2 text-gray-900"
             />
             <button className="bg-white text-blue-600 px-4 py-2">登録</button>
-            <button onClick={() => setShowNewsletter(false)}>✕</button>
+            <button onClick={() => setShowNewsletter(false)}></button>
           </div>
         </div>
       )}
