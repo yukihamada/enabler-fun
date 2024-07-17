@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getSession } from '@auth0/nextjs-auth0';
 import { db } from '@/lib/firebase';
 import { getDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 
@@ -8,7 +9,15 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const propertyDoc = doc(db, 'properties', params.id);
+const session = await getSession(request, NextResponse);
+    const userId = session?.user?.sub;
+
+    if (!userId) {
+      console.error('Auth0 token verification failed: User ID not found');
+      return NextResponse.json({ error: 'Invalid Auth0 token' }, { status: 401 });
+    }
+
+const propertyDoc = doc(db, 'properties', params.id);
     const propertySnapshot = await getDoc(propertyDoc);
 
     if (!propertySnapshot.exists()) {
@@ -32,6 +41,14 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+const session = await getSession(request, NextResponse);
+    const userId = session?.user?.sub;
+
+    if (!userId) {
+      console.error('Auth0 token verification failed: User ID not found');
+      return NextResponse.json({ error: 'Invalid Auth0 token' }, { status: 401 });
+    }
+
     const updateData = await request.json();
     const propertyDoc = doc(db, 'properties', params.id);
     const propertySnapshot = await getDoc(propertyDoc);

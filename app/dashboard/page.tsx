@@ -2,20 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
-import { User } from 'firebase/auth';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { useUser } from '@auth0/nextjs-auth0';
 
 export default function Dashboard() {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-
-    return () => unsubscribe();
-  }, []);
+const { user, error, isLoading } = useUser();
 
   return (
     <Layout>

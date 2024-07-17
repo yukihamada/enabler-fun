@@ -1,19 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { initializeApp, getApps } from 'firebase-admin/app';
-
-// Firebase Adminの初期化
-if (!getApps().length) {
-  initializeApp();
-}
+import { getSession } from '@auth0/nextjs-auth0';
 
 export async function POST(request: Request) {
   try {
     const { idToken } = await request.json();
 
     // Firebaseトークンを検証し、ユーザーIDを取得
-    const decodedToken = await getAuth().verifyIdToken(idToken);
-    const userId = decodedToken.uid;
+const session = await getSession(request, NextResponse);
+    const userId = session?.user?.sub;
 
     if (!userId) {
       console.error('Firebase token verification failed: User ID not found');

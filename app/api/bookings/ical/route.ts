@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSession } from '@auth0/nextjs-auth0';
 import { db } from '../../../../lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import ical from 'ical-generator';
@@ -16,7 +17,15 @@ export async function GET(
 
   try {
     // 物件ドキュメントからiCalURLを取得
-    const propertyRef = doc(db, 'properties', propertyId);
+const session = await getSession(request, NextResponse);
+    const userId = session?.user?.sub;
+
+    if (!userId) {
+      console.error('Auth0 token verification failed: User ID not found');
+      return NextResponse.json({ error: 'Invalid Auth0 token' }, { status: 401 });
+    }
+
+const propertyRef = doc(db, 'properties', propertyId);
     const propertyDoc = await getDoc(propertyRef);
 
     if (!propertyDoc.exists()) {
