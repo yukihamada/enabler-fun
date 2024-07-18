@@ -47,7 +47,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <nav className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <Link href="/" className="text-2xl font-bold text-blue-600 flex items-center">
-              <img src="/logo.svg" alt="Enablerロゴ" className="h-20 mr-4" />
+              <Image src="/logo.svg" alt="Enablerロゴ" width={80} height={80} className="mr-4" />
             </Link>
             <div className="hidden md:flex space-x-6 items-center">
               <Link href="/" className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">
@@ -156,7 +156,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <li><Link href="/about" className="hover:text-blue-300 transition duration-300">会社概要</Link></li>
                 <li><Link href="/services" className="hover:text-blue-300 transition duration-300">サービス</Link></li>
                 <li><Link href="/properties" className="hover:text-blue-300 transition duration-300">物件一覧</Link></li>
-              </ul>
+               </ul>
             </div>
             <div className="w-full md:w-1/3 mb-6 md:mb-0">
               <h3 className="text-xl font-semibold mb-4">所在地</h3>

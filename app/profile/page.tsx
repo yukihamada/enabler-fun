@@ -2,6 +2,7 @@ import { getSession } from '@auth0/nextjs-auth0';
 import Layout from '@/components/Layout'
 import { FaUser, FaEnvelope, FaClock, FaUserCog, FaEdit } from 'react-icons/fa';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export const metadata = {
   title: 'プロフィール - イネブラ',
@@ -24,7 +25,7 @@ export default async function Profile() {
               <div className="bg-blue-600 p-6 text-white">
                 <div className="flex items-center space-x-4">
                   {user.picture ? (
-                    <img src={user.picture} alt="プロフィール画像" className="w-24 h-24 rounded-full border-4 border-white" />
+                    <Image src={user.picture} alt="プロフィール画像" width={500} height={300} className="w-24 h-24 rounded-full border-4 border-white" />
                   ) : (
                     <div className="w-24 h-24 rounded-full bg-white text-blue-600 flex items-center justify-center text-4xl">
                       <FaUser />
