@@ -8,6 +8,7 @@ const nextConfig = {
       },
     ],
   },
+  transpilePackages: ['@mui/material', '@emotion/react', '@emotion/styled', 'react-icons'],
   webpack: (config) => {
     config.experiments = {
       ...config.experiments,

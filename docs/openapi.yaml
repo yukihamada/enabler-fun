@@ -6,7 +6,7 @@ info:
   license:
     name: MIT
 servers:
-  - url: https://www.enabler.fun/api
+  - url: https://enabler.fun/api
 paths:
   /properties:
     get:
@@ -281,7 +281,7 @@ components:
           type: string
           format: date
           example: "2023-07-01"
-          description: "予約可能開���日"
+          description: "予約可能開日"
         availableTo:
           type: string
           format: date
@@ -302,7 +302,19 @@ components:
                 type: string
               distance:
                 type: number
-          example: [{"name": "コンビニ", "distance": 0.2}, {"name": "病院", "distance": 1.5}]
+              category:
+                type: string
+                enum: ["コンビニ", "スーパー", "病院", "薬局", "駅", "バス停", "公園", "レストラン", "カフェ", "銀行", "郵便局"]
+          example:
+            - name: "セブンイレブン"
+              distance: 0.2
+              category: "コンビニ"
+            - name: "○○総合病院"
+              distance: 1.5
+              category: "病院"
+            - name: "△△公園"
+              distance: 0.5
+              category: "公園"
           description: "近隣の施設"
         latitude:
           type: number
@@ -411,6 +423,9 @@ components:
                 type: string
               distance:
                 type: number
+              category:
+                type: string
+                enum: ["コンビニ", "スーパー", "病院", "薬局", "駅", "バス停", "公園", "レストラン", "カフェ", "銀行", "郵便局"]
         latitude:
           type: number
         longitude:

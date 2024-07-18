@@ -5,39 +5,33 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
 });
 
+const membershipPrices: Record<string, string> = {
+  'シルバー': 'price_xxxxxxxxxxxxx1',
+  'ゴールド': 'price_xxxxxxxxxxxxx2',
+  'プラチナ': 'price_xxxxxxxxxxxxx3',
+};
+
 export async function POST(request: Request) {
   try {
-    const { propertyId, startDate, endDate, price, guestName, guestEmail } = await request.json();
+    const { level } = await request.json();
 
-    if (!propertyId || !startDate || !endDate || !price || !guestName || !guestEmail) {
-      return NextResponse.json({ error: '必要な情報が不足しています' }, { status: 400 });
+    if (!level || !(level in membershipPrices)) {
+      return NextResponse.json({ error: '無効なメンバーシップレベルです' }, { status: 400 });
     }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
-          price_data: {
-            currency: 'jpy',
-            unit_amount: price,
-            product_data: {
-              name: `物件予約 (${propertyId})`,
-              description: `${new Date(startDate).toLocaleDateString('ja-JP')} から ${new Date(endDate).toLocaleDateString('ja-JP')} まで`,
-            },
-          },
+          price: membershipPrices[level],
           quantity: 1,
         },
       ],
-      mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/booking/success/{CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/properties/${propertyId}`,
-      customer_email: guestEmail,
-      client_reference_id: propertyId,
+      mode: 'subscription',
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/membership/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/membership`,
       metadata: {
-        propertyId,
-        startDate,
-        endDate,
-        guestName,
+        membershipLevel: level,
       },
     });
 

@@ -41,13 +41,13 @@ export default function Services() {
             <div className="space-y-20">
               <ServiceOverview
                 title="物件管理システム"
-                description="効率的な予約管理から収益分析まで、包括的な物件管理ソリューションを提供します。"
+                description="効率的な予約管理から収益分析まで、包括的な物件管理ソリューションを提供します。サイトコントローラーの導入で、複数の予約チャネルを一元管理し、業務効率を大幅に向上させます。"
                 imageSrc="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Ff9680ef8e1c4f3742dfae4fecf16a6d8.webp?alt=media&token=cfcc2c62-a3cf-44d7-9046-8a2491c83a74"
                 isReversed={false}
               />
               <ServiceOverview
                 title="デジタル化支援"
-                description="最新のテクノロジーを活用し、宿泊施��の運営をスマート化。業務効率を大幅に向上させます。"
+                description="最新のテクノロジーを活用し、宿泊施設の運営をスマート化。スマートロックの導入やスマートホーム化により、ゲストの利便性向上と運営の効率化を実現します。"
                 imageSrc="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Ff4b8b1ee4a3282c4aa5e7bd04260ecc5.jpg?alt=media&token=fe806759-95ee-433a-a61b-af79559b299b"
                 isReversed={true}
               />
@@ -56,6 +56,12 @@ export default function Services() {
                 description="魅的で快適な宿泊空間を創出。宿泊者の満足度を高め、リピーター獲得につなげます。"
                 imageSrc="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2F0d35ec0e7b4c6eb9414be6e954dfeb51.webp?alt=media&token=a76335e5-9c07-4182-ba12-ff3bba0f9848"
                 isReversed={false}
+              />
+              <ServiceOverview
+                title="マーケティング支援"
+                description="効果的なオンラインプレゼンスの構築から、ターゲット層に合わせた戦略的なプロモーションまで、集客力向上のための包括的なマーケティングサポートを提供します。"
+                imageSrc="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fmarketing_support.jpg?alt=media&token=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+                isReversed={true}
               />
             </div>
           </div>
@@ -93,6 +99,7 @@ export default function Services() {
           <div className="container mx-auto px-4 text-center">
             <div className="bg-black bg-opacity-50 p-8 rounded-lg inline-block">
               <h2 className="text-4xl font-bold mb-8">イネブラのサービスで、あなたの宿泊事業を次のステージへ</h2>
+              <p className="text-xl mb-8">スマートロック導入、マーケティング支援、サイトコントローラー導入など、お気軽にご相談ください。</p>
               <a href="/contact" className="bg-white text-blue-600 hover:bg-blue-100 font-bold py-3 px-6 rounded-full text-xl inline-block transition duration-300">
                 無料相談を予約する
               </a>
