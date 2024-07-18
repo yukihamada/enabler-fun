@@ -4,7 +4,6 @@ import { FaBed, FaBath, FaRuler } from 'react-icons/fa';
 
 interface PropertyBasicInfoProps {
   property: {
-    title: string;
     address: string;
     bedrooms: number;
     bathrooms: number;
@@ -26,14 +25,6 @@ const PropertyBasicInfo: React.FC<PropertyBasicInfoProps> = ({
       <Grid item xs={12}>
         {isEditing ? (
           <>
-            <TextField
-              fullWidth
-              name="title"
-              label="タイトル"
-              value={property.title}
-              onChange={onInputChange}
-              className="mb-4"
-            />
             <TextField
               fullWidth
               name="address"
@@ -91,7 +82,6 @@ const PropertyBasicInfo: React.FC<PropertyBasicInfoProps> = ({
           </>
         ) : (
           <>
-            <Typography variant="h3" className="mb-4 font-bold text-gray-800">{property.title}</Typography>
             <Typography variant="h6" className="mb-4 text-gray-600">{property.address}</Typography>
             <div className="flex space-x-4 mb-6">
               {property.bedrooms > 0 && (

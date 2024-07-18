@@ -242,6 +242,10 @@ export default function PropertyDetail() {
               </div>
             )}
 
+            <Typography variant="h1" className="mb-8 text-4xl font-bold">
+              {isEditing ? editedProperty?.title ?? '' : property.title}
+            </Typography>
+
             <ImageGallery
               images={isEditing ? editedProperty?.imageUrls ?? [] : property.imageUrls}
               isEditing={isEditing}
@@ -250,7 +254,6 @@ export default function PropertyDetail() {
 
             <PropertyBasicInfo
               property={{
-                title: isEditing ? editedProperty?.name ?? '' : property.name,
                 address: isEditing ? editedProperty?.address ?? '' : property.address,
                 bedrooms: isEditing ? editedProperty?.bedrooms ?? 0 : property.bedrooms,
                 bathrooms: isEditing ? editedProperty?.bathrooms ?? 0 : property.bathrooms,

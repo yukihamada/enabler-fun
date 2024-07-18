@@ -12,17 +12,26 @@ interface ImageGalleryProps {
 }
 
 const ImageGallery: React.FC<ImageGalleryProps> = ({ images, isEditing, onInputChange }) => {
-  const { property, updateProperty } = useProperty() ?? {};
+  const propertyContext = useProperty();
+  const { property, updateProperty } = propertyContext ?? {};
   const [newImageUrl, setNewImageUrl] = React.useState('');
 
-  const handleAddImage = () => {
-    if (newImageUrl.trim() !== '' && property && property.id && updateProperty) {
-      updateProperty({
-        ...property,
-        id: property.id,
-        imageUrls: [...property.imageUrls, newImageUrl.trim()]
-      } as Property);
-      setNewImageUrl('');
+  const handleAddImage = async () => {
+    if (newImageUrl.trim() !== '' && property && updateProperty) {
+      const updatedImageUrls = Array.isArray(property.imageUrls) 
+        ? [...property.imageUrls, newImageUrl.trim()]
+        : [newImageUrl.trim()];
+      
+      try {
+        await updateProperty({
+          ...property,
+          imageUrls: updatedImageUrls
+        });
+        console.log('画像URLが正常に追加されました');
+        setNewImageUrl('');
+      } catch (error) {
+        console.error('画像URL追加中にエラーが発生しました:', error);
+      }
     }
   };
 
@@ -48,7 +57,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, isEditing, onInputC
       {isEditing ? (
         <div className="mb-4">
           <Typography variant="subtitle1" className="mb-2">画像</Typography>
-          {property?.imageUrls.map((url, index) => (
+          {Array.isArray(property?.imageUrls) && property.imageUrls.map((url, index) => (
             <div key={index} className="flex items-center mb-2">
               {url && (url.startsWith('http://') || url.startsWith('https://')) ? (
                 <Image 

@@ -29,6 +29,7 @@ export interface Property {
   bookingLinks: BookingLink[];
   size?: number;
   bookings: Booking[];
+  title: string;
 }
 
 export interface BookingLink {
@@ -50,7 +51,6 @@ export interface BookingData {
   endDate: Date;
   guestName: string;
   guestEmail: string;
-  totalPrice: number; // この行を追加
 }
 
 export interface CalendarEvent {
