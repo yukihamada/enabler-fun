@@ -1,15 +1,24 @@
 import Image from 'next/image';
 import Layout from '@/components/Layout';
 import { FaHome, FaLaptop, FaPaintBrush } from 'react-icons/fa';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 export const metadata = {
-  title: 'イネブラについて - 民泊・簡易宿泊事業のデジタル化と空間プロデュースのパイオニア',
-  description: 'イネブラは、民泊・簡易宿泊事業のデジタル化と空間プロデュースのパイオニアとして、物件管理やデジタル化支援、空間デザイン、運営サポートなどのサービスを提供しています。',
+  title: 'Enabler DAOについて - 厳選シェアリングサービスのパイオニア',
+  description: 'Enabler DAOは、厳選シェアリングサービスのパイオニアとして、高品質な物件の提供、デジタル化支援、空間デザイン、運営サポートなどのサービスを提供しています。',
 }
 
 export default function AboutPage() {
   return (
     <Layout>
+      <Header 
+        isDarkMode={false}
+        toggleDarkMode={() => {}}
+        toggleMenu={() => {}}
+        isMenuOpen={false}
+        changeLanguage={() => {}}
+      />
       <main className="bg-white text-gray-900">
         <section className="relative h-screen flex items-center justify-center">
           <Image
@@ -21,7 +30,7 @@ export default function AboutPage() {
           />
           <div className="absolute inset-0 bg-black opacity-50"></div>
           <div className="relative z-10 text-center text-white">
-            <h1 className="text-6xl font-bold mb-4">イネブラが実現する<br/>宿泊事業の未来</h1>
+            <h1 className="text-6xl font-bold mb-4">Enabler DAOが実現する<br/>シェアリング事業の未来</h1>
             <p className="text-2xl mb-8">デジタル化と空間プロデュースで、新しい価値を創造</p>
             <a href="#mission" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full text-xl inline-block transition duration-300">
               私たちの想いを知る
@@ -42,7 +51,7 @@ export default function AboutPage() {
                   className="rounded-lg shadow-lg mb-4"
                 />
                 <h3 className="text-3xl font-semibold mb-4">Mission</h3>
-                <p className="text-xl leading-relaxed">宿泊事業者の可能性を最大限に引き出し、デジタル化と空間プロデュースを通じて、魅力的な宿泊体験を創出します。私たちは、宿泊産業の発展に貢献し、旅行者と地域社会に新たな価値を提供します。</p>
+                <p className="text-xl leading-relaxed">シェアリング事業者の可能性を最大限に引き出し、デジタル化と空間プロデュースを通じて、魅力的なシェアリング体験を創出します。私たちは、シェアリング産業の発展に貢献し、旅行者と地域社会に新たな価値を提供します。</p>
               </div>
               <div className="md:w-1/2 md:pl-12">
                 <Image
@@ -53,7 +62,7 @@ export default function AboutPage() {
                   className="rounded-lg shadow-lg mb-4"
                 />
                 <h3 className="text-3xl font-semibold mb-4">Vision</h3>
-                <p className="text-xl leading-relaxed">すべての宿泊施設が、テクノロジーと空間デザインの力を最大限に活用できる世界を目指します。イネブラを通じて、宿泊事業者が成功を収め、旅行者に忘れられない体験を提供し続けます。</p>
+                <p className="text-xl leading-relaxed">すべてのシェアリング施設が、テクノロジーと空間デザインの力を最大限に活用できる世界を目指します。Enabler DAOを通じて、シェアリング事業者が成功を収め、旅行者に忘れられない体験を提供し続けます。</p>
               </div>
             </div>
           </div>
@@ -78,7 +87,7 @@ export default function AboutPage() {
                 <ul className="text-left list-disc pl-5">
                   <li>スマートロックの導入</li>
                   <li>AIチャットボットの実装</li>
-                  <li>オンラインチェックインシステム</li>
+                  <li>オンインチェックインステム</li>
                 </ul>
               </div>
               <div className="text-center">
@@ -106,8 +115,8 @@ export default function AboutPage() {
                   height={300}
                   className="rounded-lg mb-4"
                 />
-                <h3 className="text-2xl font-semibold mb-4">「イネブラのおかげで、宿泊施設の運営が劇的に改善しました」</h3>
-                <p className="text-lg">イネブラの物件管理システムを導入してから、予約管理や収益分析が格段に効率化されました。デジタル化支援のおかげで、スタッフの業務負担も大幅に軽減されています。</p>
+                <h3 className="text-2xl font-semibold mb-4">「Enabler DAOのおかげで、シェアリング施設の運営が劇的に改善しました」</h3>
+                <p className="text-lg">Enabler DAOの物件管理システムを導入してから、予約管理や収益分析が格段に効率化されました。デジタル化支援のおかげで、スタッフの業務負担も大幅に軽減されています。</p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <Image
@@ -117,8 +126,8 @@ export default function AboutPage() {
                   height={300}
                   className="rounded-lg mb-4"
                 />
-                <h3 className="text-2xl font-semibold mb-4">「空間デザインで、宿泊者の満足度が向上しました」</h3>
-                <p className="text-lg">イネブラの空間デザインサービスを利用して、宿泊施設の内装を一新しました。その結果、宿泊者からの評価が大幅に上がり、リピーター率も増加しています。</p>
+                <h3 className="text-2xl font-semibold mb-4">「空間デザインで、シェアリング者の満足度が向上しました」</h3>
+                <p className="text-lg">Enabler DAOの空間デザインサービスを利用して、シェアリング施設の内装を一新しました。その結果、シェアリング者からの評価が大幅に上がり、リピーター率も増加しています。</p>
               </div>
             </div>
           </div>
@@ -183,7 +192,7 @@ export default function AboutPage() {
 
         <section className="py-20 bg-gray-100">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-4xl font-bold mb-8">イネブラで、あなたの宿泊事業の未来を切り開こう</h2>
+            <h2 className="text-4xl font-bold mb-8">Enabler DAOで、あなたのシェアリング事業の未来を切り開こう</h2>
             <a href="/contact" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full text-xl inline-block">
               今すぐ相談する
             </a>
@@ -193,9 +202,11 @@ export default function AboutPage() {
         <section className="py-20 bg-white">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-4xl font-bold mb-8">会社情報</h2>
-            <p className="text-xl mb-4">株式会社イネブラ</p>
-            <p className="text-lg mb-2">濱田優貴</p>
-            <p className="text-lg mb-4">所在地：東京都千代田区九段南１丁目６−５ 九段会館テラス ２F</p>
+            <p className="text-xl mb-4">Enabler DAO</p>
+            <p className="text-lg mb-2">代表: 濱田優貴</p>
+            <p className="text-lg mb-4">所在地：〒123-4567 東京都渋谷区○○町1-2-3</p>
+            <p className="text-lg mb-2">TEL: 03-1234-5678</p>
+            <p className="text-lg mb-4">Email: info@example.com</p>
           </div>
         </section>
       </main>

@@ -1,0 +1,13 @@
+interface Reservation {
+  propertyId: string;
+  userId: string;
+  startDate: string | Date; // 日付型または文字列型
+  startTime: string; // "HH:mm" 形式
+  endDate: string | Date; // 日付型または文字列型
+  endTime: string; // "HH:mm" 形式
+  status: string; // 例: "予約済み", "キャンセル済み"
+  guests: number;
+  totalPrice: number;
+}
+
+export default Reservation;

@@ -5,5 +5,21 @@ export interface FormField {
     placeholder?: string;
     required?: boolean;
     options?: string[];
-    example?: string;
-  }
+}
+
+export interface Invoice {
+  id: string;
+  customerName: string;
+  amount: number;
+  checkInDate: string;
+  checkOutDate: string;
+  dueDate: string;
+  status: string;
+  stripeInfo?: {
+    paymentIntentId: string;
+    paymentMethod: string;
+    paymentStatus: string;
+  };
+  propertyId?: string;
+  customerId?: string;
+}

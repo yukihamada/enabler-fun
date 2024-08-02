@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       }
     } else {
       // デフォルトは公開中の物件のみ
-      properties = properties.filter((property: Property) => property.status === 'published');
+//      properties = properties.filter((property: Property) => property.status === 'published');
     }
 
     return NextResponse.json(properties);

@@ -1,312 +1,516 @@
-'use client';
+'use client'
 
-import React from 'react';
-import dynamic from 'next/dynamic';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Calendar, Info, Menu, Users, Bed, Bath, Wifi, Car, Cigarette, Bone, Moon, Sun } from 'lucide-react';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { format, addDays, subMonths, isAfter } from 'date-fns';
+import { ja } from 'date-fns/locale';
 import Link from 'next/link';
 import Image from 'next/image';
-import Layout from '../components/Layout'; // Layout component imported
-import { FaSearch, FaHome, FaChartLine, FaBriefcase, FaUsers, FaLaptop, FaPaintBrush, FaHandsHelping } from 'react-icons/fa';
-import { useState, useEffect, useRef } from 'react';
-import Head from 'next/head';
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import type { ComponentType } from 'react';
-import { YouTubeEvent } from 'react-youtube';
+import { Property } from '../types/property'; // Property型をインポート
+import { useAuth0 } from '@auth0/auth0-react';
+import ImageCarousel from '../components/ImageCarousel'; // ImageCarouselコンポーネントをインポート
+import { loadStripe } from '@stripe/stripe-js';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import CountdownTimer from '../components/CountdownTimer'; // CountdownTimerコンポーネントをインポート
+import { CheckCircleIcon } from '@heroicons/react/24/solid'
+import Favicon from '../components/Favicon'; // Faviconコンポーネントをインポート
+import PropertyDetails from '../components/PropertyDetails'; // PropertyDetailsコンポーネントをインポート
 
-const YouTube = dynamic(() => import('react-youtube') as Promise<{ default: ComponentType<any> }>, { ssr: false });
+// Stripeの公開鍵を設定します。
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-const images = [
-  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fd46e0678579e6790a7f86931b0fa1478.webp?alt=media&token=dbe025fd-1004-4637-bc06-a3f3c7031d7d',
-  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2F4b77acbc70be968a98df75043c936787.webp?alt=media&token=2caa8a11-8b03-4f6e-93b9-7f18113624a4',
-  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2F8b049917f6f69cf2ebf10f32dfbafe75.JPG?alt=media&token=8b5c109c-f24c-40de-bdd5-3fa12b6510e5',
-  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Faf0b1d14cc9f3301a4ce361af62c2cf3.webp?alt=media&token=f039852a-c1f3-4d0d-a9a8-c6b43825a994',
-  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fc1bdd6a6a4d55cad234259acffc35d69.webp?alt=media&token=2556ec8f-4039-402a-aeec-defded250eb3',
-  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Ffdd5c8d3e1c89b2e4a6558a601f43513.webp?alt=media&token=801885fc-1690-499a-8cf3-6ff52d2d2143',
-  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Ff4b8b1ee4a3282c4aa5e7bd04260ecc5.jpg?alt=media&token=fe806759-95ee-433a-a61b-af79559b299b',
-  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fc67e975008be54e3fdc85c925333c7a2.webp?alt=media&token=2593548c-9dde-4c14-963a-c3eef5485cd8',
-  'https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2Fdec69e9042e4667e61dd537ab953ccdf.webp?alt=media&token=d0855b16-6cfc-4a76-9bd0-f7bafc952e7b'
-];
+const formatDate = (date: Date): string => {
+  return format(date, 'M/d(E)', { locale: ja });
+};
 
-interface Property {
-  id: string;
-  title: string;
-  address: string;
-  price: number;
-  imageUrls: string[] | string;
-  description: string;
-  status: string;
-}
+export default function CuratedSharingService() {
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [isPastMonth, setIsPastMonth] = useState(false); // 過去月かどうかを示す状態を追加
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [dates, setDates] = useState<Date[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [language, setLanguage] = useState('ja');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { loginWithRedirect, logout, isAuthenticated } = useAuth0();
 
-export default function Home() {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState('all');
-  const [showNewsletter, setShowNewsletter] = useState(false);
-  const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
-  const playerRef = useRef<YouTubeEvent | null>(null);
+  const [newProperty, setNewProperty] = useState<Partial<Property>>({
+    title: '',
+    type: 'property', // デフォルト値を追加
+    isPremium: false,
+    description: '',
+    price: 30000, // price プパティを初期化
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    setNewProperty(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // ここで新しい物件をFirestoreに追加する処理を実装
+    // 例: await addDoc(collection(db, 'properties'), newProperty);
+    console.log('新しい物件を登録:', newProperty);
+    // 登録後、フォームをリセットし、物件リストを更新
+    setNewProperty({
+      title: '',
+      type: 'property',
+      isPremium: false,
+      description: '',
+      price: 0
+    });
+    // 物件リストを再取得する処理をここに追加
+  };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const fetchFeaturedProperties = async () => {
+    const fetchProperties = async () => {
+      setLoading(true);
+      setError(null);
       try {
+        console.log('Fetching properties...');
         const propertiesCollection = collection(db, 'properties');
-        const propertiesQuery = query(
-          propertiesCollection,
-          where('status', '==', 'published'),
-          limit(20)
-        );
-        const propertiesSnapshot = await getDocs(propertiesQuery);
+        const propertiesSnapshot = await getDocs(propertiesCollection);
+        console.log('Snapshot received:', propertiesSnapshot.size, 'documents');
         const propertiesList = propertiesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        } as Property));
-        
-        // ランダムに6件選択
-        const shuffled = propertiesList.sort(() => 0.5 - Math.random());
-        setFeaturedProperties(shuffled.slice(0, 6));
+        } as Property)); // Property型を適用
+        console.log('Properties list:', propertiesList);
+        setProperties(propertiesList);
       } catch (error) {
-        console.error('物件の取得に失敗しました:', error);
+        console.error('Error fetching properties:', error);
+        setError('物件の取得中にエラーが発生しました。しばらくしてからもう一度お試しください。'); // エラーメッセージを修正
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchFeaturedProperties();
+    fetchProperties();
   }, []);
 
-  const filterProperties = (category: string) => {
-    setActiveTab(category);
-    // ここで物件のフィルタリングロジックを実装
+  useEffect(() => {
+    const newDates = getDates(currentDate, 30); // 30日分のデータを取得
+    setDates(newDates);
+  }, [currentDate]);
+
+  const getDates = (startDate: Date, days: number = 7): Date[] => {
+    return Array.from({ length: days }, (_, i) => addDays(startDate, i));
   };
 
-  return (
-    <Layout>
-      <div className="min-h-screen flex flex-col">
-        <Head>
-          <title>イネブラ（Enabler） - 民泊・簡易宿泊事業のデジタル化と空間プロデュース</title>
-          <meta name="description" content="イネブラは、民泊・簡易宿泊事業のデジタル化と空間プロデュースを行う企業です。物件管理、デジタル化支援、空間デザイン、運営サポートなど、幅広いサービスを提供しています。" />
-          <meta name="keywords" content="民泊, 易宿泊, デジタル化, 空間プロデュース, 物件管理, ネブラ, Enabler" />
-        </Head>
-        <main className="bg-white text-gray-900 flex-grow">
-          <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
-            <div className="absolute inset-0 w-full h-full">
-              <YouTube
-                videoId="iZO6LZ_7FtI"
-                opts={{
-                  playerVars: {
-                    autoplay: 1,
-                    controls: 0,
-                    rel: 0,
-                    showinfo: 0,
-                    mute: 1,
-                    loop: 1,
-                    playlist: 'iZO6LZ_7FtI',
-                  },
-                }}
-                onReady={(event: YouTubeEvent) => {
-                  playerRef.current = event;
-                  event.target.mute();
-                }}
-                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[300%] h-[300%] min-w-full min-h-full object-cover"
-                containerClassName="absolute inset-0 w-full h-full"
-                iframeClassName="w-full h-full"
-              />
-            </div>
-            <div className="absolute inset-0 bg-black opacity-50"></div>
-            <div className="relative z-10 text-center text-white px-4">
-              <h1 className="text-5xl md:text-6xl font-bold mb-4">イネブラ（Enabler）</h1>
-              <p className="text-xl md:text-2xl mb-8">民泊・簡易宿泊事業のデジタル化と空間プロデュースのパイオニア</p>
-              <div className="space-x-4">
-                <Link href="/properties" className="btn-primary inline-block" aria-label="物件を探す">
-                  物件を探す
-                </Link>
-                <Link href="/services" className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full text-lg hover:bg-white hover:text-blue-600 transition duration-300 inline-block mt-4 md:mt-0">
-                  サービス詳細
-                </Link>
-                <Link href="/contact" className="bg-white text-blue-600 px-8 py-3 rounded-full text-lg hover:bg-blue-100 transition duration-300 inline-block mt-4 md:mt-0">
-                  お問い合わせ
-                </Link>
-              </div>
-            </div>
-          </section>
+  const handleDateChange = (days: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + days);
 
-          <section className="py-16 px-4">
-            <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">注目の物件</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {featuredProperties.map((property) => (
-                <div key={property.id} className="bg-white shadow-lg rounded-lg overflow-hidden hover:shadow-xl transition duration-300">
-                  <Image 
-                    src={Array.isArray(property.imageUrls) ? property.imageUrls[0] : property.imageUrls} 
-                    alt={property.title} 
-                    width={600} 
-                    height={400} 
-                    className="w-full h-64 object-cover" 
-                  />
-                  <div className="p-6">
-                    <h3 className="text-2xl font-semibold mb-4">{property.title}</h3>
-                    <p className="mb-4">{property.address}</p>
-                    <p className="mb-4 line-clamp-3">{property.description}</p>
-                    <Link href={`/properties/${property.id}`} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300 inline-block">
-                      詳細を見る
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="text-center mt-8">
-              <Link href="/properties" className="bg-blue-600 text-white px-6 py-3 rounded-full text-lg hover:bg-blue-700 transition duration-300">
-                すべての物件を見る
-              </Link>
-            </div>
-          </section>
+    // newDateが現在の月より前の月の場合は、日付を現在の月の1日に設定
+    if (newDate.getMonth() < new Date().getMonth()) {
+      newDate.setDate(1);
+    }
 
-          <section className="py-16 px-4 bg-gray-50">
-            <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">イブラのサービス</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-              {[
-                { name: '物件管理', icon: FaHome, description: '効率的な物件管理システムで、オーナー様の負担を軽減します。' },
-                { name: 'デジタル化支援', icon: FaLaptop, description: '最新のテクノロジを活用し、予約管理や顧客対応効率化します。' },
-                { name: '空間デザイン', icon: FaPaintBrush, description: '魅力的で快適な空間づくりで、宿泊者の満足度を高めます。' },
-                { name: '運営サポート', icon: FaHandsHelping, description: '法規制対応から集客まで、運営全般をサポートします。' }
-              ].map((service) => (
-<div key={service.name} className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition duration-300 text-center">
-                  {React.createElement(service.icon, { className: "text-4xl mb-4 mx-auto text-blue-600" })}
-                  <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
-                  <p className="text-gray-600 mb-4">{service.description}</p>
-                  <Link href={`/services#${service.name}`} className="text-blue-600 hover:underline">
-                    詳細を見る
-                  </Link>
-                </div>
-              ))}
-            </div>
-            <div className="text-center mt-12">
-              <Link href="/services" className="bg-blue-600 text-white px-6 py-3 rounded-full text-lg hover:bg-blue-700 transition duration-300">
-                すべてのサービスを見る
-              </Link>
-            </div>
-          </section>
+    setCurrentDate(newDate);
+    setIsPastMonth(newDate.getMonth() < new Date().getMonth()); // 過去月かどうかを更新
+  };
 
-          <section className="py-16 px-4 bg-white">
-            <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">イネブラの強み</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              <div className="bg-gray-50 p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-semibold mb-4">豊富な経験</h3>
-                <p className="text-gray-600">多数の物件管理実績と、業界をリードする専門知識を持つ経豊富なチーム</p>
-              </div>
-              <div className="bg-gray-50 p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-semibold mb-4">革新的なテクノロジ</h3>
-                <p className="text-gray-600">最新のデジタルツールとAIを活用し、効率的な運営と顧客満足度の向上を実現</p>
-              </div>
-              <div className="bg-gray-50 p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-semibold mb-4">カスタマズされたソリューション</h3>
-                <p className="text-gray-600">各物件のユニークなニーズに合わせた、柔軟かつ効果的なサービス提供</p>
-              </div>
-            </div>
-          </section>
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
 
-          <section className="py-16 px-4 bg-gray-100">
-            <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">お客様の声</h2>
-            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <p className="text-gray-600 mb-4">&quot;イネブラのサービスのおかげで、物件の稼働率が大幅に向上しした。プロフェッショナルなサポートに感謝しています。&quot;</p>
-                <p className="font-semibold">中 様 - 東京都内の物件オーナー</p>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <p className="text-gray-600 mb-4">&quot;デジタル化支援により、��約管理が格段に楽になりました。顧客満足度も上がり、リピーターが増えています。&quot;</p>
-                <p className="font-semibold">佐藤 様 - 京都市内の町家オーナー</p>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <p className="text-gray-600 mb-4">&quot;空間デザインのアドバイスが素晴らしかったです。お客様からの評価も上がり、SNSでの口コミも増えました。&quot;</p>
-                <p className="font-semibold">鈴木 様 - 沖縄のヴィラオーナー</p>
-              </div>
-            </div>
-          </section>
+  const changeLanguage = (lang: string) => {
+    setLanguage(lang);
+    // ここで言語切り替えのロジックを実装します
+    // 例: i18nライブラリを使用する場合は、ここでロケールを変更します
+  };
 
-          <section className="py-16 px-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-            <h2 className="text-3xl md:text-4xl font-semibold mb-12 text-center">民泊革命、デジタルで実現</h2>
-            <p className="text-xl text-center mb-8">イネブラが提供する次世代の宿泊体験</p>
-            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              <div className="bg-white bg-opacity-20 p-6 rounded-lg backdrop-filter backdrop-blur-lg">
-                <FaLaptop className="text-4xl mb-4" />
-                <h3 className="text-xl font-semibold mb-2">スマート運営</h3>
-                <p>AIとIoTを活用した効率的な物件管理で、運営の手間を大幅に削減します。</p>
-              </div>
-              <div className="bg-white bg-opacity-20 p-6 rounded-lg backdrop-filter backdrop-blur-lg">
-                <FaChartLine className="text-4xl mb-4" />
-                <h3 className="text-xl font-semibold mb-2">デジタル変革</h3>
-                <p>予約から決済まで、シームレスな顧客体験を提供し、満足度を向上させます。</p>
-              </div>
-              <div className="bg-white bg-opacity-20 p-6 rounded-lg backdrop-filter backdrop-blur-lg">
-                <FaPaintBrush className="text-4xl mb-4" />
-                <h3 className="text-xl font-semibold mb-2">空間デザイン</h3>
-                <p>快適さと魅力を両立する宿泊空間の創出で、滞在の質を高めます。</p>
-              </div>
-            </div>
-          </section>
+  useEffect(() => {
+    // システムの設定を確認
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    setIsDarkMode(darkModeMediaQuery.matches);
 
-          <section className="py-16 px-4">
-            <h2 className="text-3xl font-semibold mb-12 text-center">お客様の声</h2>
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              <div className="bg-gray-100 p-8 rounded-lg shadow-md relative">
-                <Image src="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2F3f37b2c73ea7ad8ae0fe07b810a2fa42.png?alt=media&token=a9461102-e871-4a4c-81f4-f90481bc241a" alt="山田 太郎" width={80} height={80} className="rounded-full absolute -top-4 -left-4 border-4 border-white" />
-                <p className="mb-4 italic">&ldquo;イネブラのサポートのおかげで、私の物件の稼働率が大幅に向上しました。デジタルの導入も円滑で、運営の効率が格段に上がりました。&rdquo;</p>
-                <p className="font-semibold">- 山田 綾子, 25歳</p>
-                <p className="text-sm text-gray-600">一戸建て所有者</p>
-              </div>
-              <div className="bg-gray-100 p-8 rounded-lg shadow-md relative">
-                <Image src="https://firebasestorage.googleapis.com/v0/b/enabler-396600.appspot.com/o/image%2F11e0dc1342153fd44cb5e1208ffefa5e.png?alt=media&token=7cfe0e58-3e71-45fd-85aa-cf3bf28e2ff9" alt="鈴木 花子" width={80} height={80} className="rounded-full absolute -top-4 -left-4 border-4 border-white" />
-                <p className="mb-4 italic">&ldquo;イネブラの空間デザインサービス利用して、古い町家を素敵な宿泊施設にリノベーションできました。予約が殺到するほどの人気物件になりました。&rdquo;</p>
-                <p className="font-semibold">- 鈴木 花子, 58歳</p>
-                <p className="text-sm text-gray-600">町家オーナー</p>
-              </div>
-            </div>
-          </section>
+    // システムの設定変更を監視
+    const listener = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
+    darkModeMediaQuery.addListener(listener);
+    return () => darkModeMediaQuery.removeListener(listener);
+  }, []);
 
-          <section className="py-16 px-4 bg-gray-100">
-            <div className="max-w-4xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-semibold mb-8 text-center">お問い合わせ</h2>
-              <p className="text-xl mb-8 text-center">民泊・簡易宿泊事業でのお悩みやご相談は、お気軽にイネブラまでご連絡ください</p>
-              <form className="bg-white p-8 rounded-lg shadow-md">
-                <div className="mb-4">
-                  <label htmlFor="name" className="block text-gray-700 text-sm font-bold mb-2">お名前</label>
-                  <input type="text" id="name" name="name" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
-                </div>
-                <div className="mb-4">
-                  <label htmlFor="email" className="block text-gray-700 text-sm font-bold mb-2">メールアドレス</label>
-                  <input type="email" id="email" name="email" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
-                </div>
-                <div className="mb-6">
-                  <label htmlFor="message" className="block text-gray-700 text-sm font-bold mb-2">メッセージ</label>
-                  <textarea id="message" name="message" rows={4} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required></textarea>
-                </div>
-                <div className="flex items-center justify-between">
-                  <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300">
-                    信する
-                  </button>
-                </div>
-              </form>
-            </div>
-          </section>
-        </main>
+  useEffect(() => {
+    // ダークモードの切り替え
+    document.documentElement.classList.toggle('dark', isDarkMode);
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
+  const [selectedDates, setSelectedDates] = useState<{ [propertyId: string]: string[] }>({});
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+  });
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [showBookingCompleteModal, setShowBookingCompleteModal] = useState(false);
+  const [showPropertyDetails, setShowPropertyDetails] = useState<string | null>(null); // 追加
+
+  const handleDateClick = (propertyId: string, date: string) => {
+    const threeMonthsLater = subMonths(new Date(), -3); // 3ヶ月後の日付を取得
+    if (!isAuthenticated && isAfter(new Date(date), threeMonthsLater)) {
+      // 3ヶ月後以降の日付がクリックされ、かつ未ログインの場合はアラートを表示
+      alert('3ヶ月後以降の予約は会員登録が必要です。');
+      return; 
+    }
+
+    setSelectedDates(prev => {
+      const updatedDates = prev[propertyId] ? [...prev[propertyId]] : [];
+      const dateIndex = updatedDates.indexOf(date);
+      if (dateIndex > -1) {
+        updatedDates.splice(dateIndex, 1);
+      } else {
+        updatedDates.push(date);
+      }
+      return {
+        ...prev,
+        [propertyId]: updatedDates,
+      };
+    });
+  };
+
+  const handlePropertyDetailsClick = (propertyId: string) => {
+    setShowPropertyDetails(prev => prev === propertyId ? null : propertyId);
+  };
+
+  const handleBookingClick = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // 予約を完了させる処理
+      const response = await fetch('/api/booking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          selectedDates,
+          formData,
+          selectedProperties: properties.filter(property => Object.keys(selectedDates).includes(property.id))
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('予約に失敗しました');
+      }
+
+      const result = await response.json();
+
+      // 予約が完了した、支払いURLを設定
+      setPaymentUrl(result.paymentUrl);
+      setShowBookingForm(false);
+      setShowBookingCompleteModal(true); // モーダルを表示
+
+      // 成功メッセージを表示
+      // alert('予約が完了しました。支払いページに進んでください。');
+
+    } catch (error) {
+      console.error('予約エラー:', error);
+      alert('予約の処理中にラーが発生しました。もう一度お試しください。');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-100 bg-opacity-50 z-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-opacity-75"></div>
       </div>
-      {showNewsletter && (
-        <div className="fixed bottom-0 left-0 right-0 bg-blue-600 text-white p-4">
-          <div className="max-w-4xl mx-auto flex justify-between items-center">
-            <p>最新情報を受け取りませんか？</p>
-            <input 
-              type="email" 
-              placeholder="メールアドレスを入力" 
-              className="px-4 py-2 text-gray-900"
-            />
-            <button className="bg-white text-blue-600 px-4 py-2">登録</button>
-            <button onClick={() => setShowNewsletter(false)}></button>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-500 font-bold mt-10">
+        {error}
+      </div>
+    );
+  }
+
+  if (properties.length === 0) {
+    return <div>物件が見つかりませんでした。</div>;
+  }
+
+  return (
+    <div className={`w-full ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} p-2 sm:p-4`}>
+      <Favicon /> {/* Faviconコンポーネントを追加 */}
+      <Header
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        toggleMenu={toggleMenu}
+        isMenuOpen={isMenuOpen}
+        changeLanguage={changeLanguage}
+      />
+      <div className="max-w-[2000px] mx-auto"> {/* この部分を削除 */}
+        {/* カレンダー部分 */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => handleDateChange(-30)}
+              className={`
+                ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'} 
+                p-2 rounded-md shadow flex items-center transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500
+                ${isPastMonth ? '' : 'opacity-50 cursor-not-allowed'} // 過去月でない場合は非活性化
+              `}
+              aria-label="前月"
+            >
+              <ChevronLeft className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-gray-600'}`} />
+              <span className={`hidden sm:inline ml-2 whitespace-nowrap ${isPastMonth ? 'text-white' : 'text-gray-400'}`}>前月</span> {/* ラベルの色を変更 */}
+            </button>
+            <div className={`flex items-center text-sm sm:text-base ${isDarkMode ? 'bg-gray-800' : 'bg-white'} px-3 py-2 sm:px-4 sm:py-2 rounded-md shadow`}>
+              <Calendar className={`mr-2 h-4 w-4 ${isDarkMode ? 'text-white' : 'text-gray-600'}`} aria-hidden="true" />
+              <span className={isDarkMode ? 'text-white' : 'text-gray-800'}>{formatDate(dates[0])} ～ {formatDate(dates[dates.length - 1])}</span>
+            </div>
+            <button 
+              onClick={() => handleDateChange(30)} 
+              className={`${isDarkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'} p-2 rounded-md shadow flex items-center transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              aria-label="翌月"
+            >
+              <span className={`hidden sm:inline mr-2 whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>翌月</span>
+              <ChevronRight className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-gray-600'}`} />
+            </button>
+          </div>
+
+          <div className="relative">
+            <div className={`overflow-x-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow`}>
+              <div className="min-w-[800px] w-full">
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      <th className={`p-3 text-left ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-50 text-gray-800'} w-[288px] sticky left-0 z-20`}>物件名</th>
+                      {dates.map((date, index) => (
+                        <th key={index} className={`p-3 text-center whitespace-nowrap ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-50 text-gray-800'}`}>
+                          {formatDate(date)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {properties.map((property) => (
+                      <React.Fragment key={property.id}>
+                        <tr className={`border-t ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition-colors duration-150`}>
+                          <td className={`p-3 sticky left-0 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} z-10 w-[288px]`}>
+                            <div className="flex items-center">
+                              <span className={`font-medium truncate max-w-[24ch] text-base ${isDarkMode ? 'text-white' : 'text-gray-800'}`} title={property.title}>
+                              {property.name || property.title || "無題"}
+                              </span>
+                              <button
+                                onClick={() => handlePropertyDetailsClick(property.id)} // 変更
+                                 className={`ml-2 ${isDarkMode ? 'text-gray-400 hover:text-blue-400' : 'text-gray-400 hover:text-blue-600'} transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full`}
+                                aria-label={`${property.title}の詳細を${showPropertyDetails === property.id ? '隠す' : '表示する'}`} // 変更
+                              >
+                                <Info className={`h-5 w-5 ${isDarkMode ? 'text-white' : 'text-gray-600'}`} />
+                               </button>
+                             </div>
+                           </td>
+                          {dates.map((date, dateIndex) => (
+                            <td key={dateIndex} className="p-3 text-center" style={{ minWidth: '100px' }}>
+                              <div
+                                onClick={() => handleDateClick(property.id, format(date, 'yyyy-MM-dd'))}
+                                className={`cursor-pointer rounded-full py-1 px-2 text-xs font-medium transition-colors duration-150 ${
+                                  property.availableDates?.includes(format(date, 'yyyy-MM-dd'))
+                                    ? selectedDates[property.id]?.includes(format(date, 'yyyy-MM-dd')) 
+                                      ? 'bg-green-500 text-white' 
+                                      : 'bg-green-100 text-green-800 hover:bg-green-200'
+                                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                                }`}
+                              >
+                                {/* 金額表示部分を条件付きで変更 */}
+                                {isAuthenticated ? (
+                                  property.availableDates?.includes(format(date, 'yyyy-MM-dd'))
+                                    ? `¥100,000`
+                                    : '準備中'
+                                ) : (
+                                  isAfter(date, subMonths(new Date(), -3)) ? (
+                                    '会員限定'
+                                  ) : (
+                                    property.availableDates?.includes(format(date, 'yyyy-MM-dd'))
+                                      ? `¥100,000`
+                                      : '準備中'
+                                  )
+                                )}
+                              </div>
+                            </td>
+                          ))}
+                        </tr>
+                        {showPropertyDetails === property.id && ( // 変更
+                          <tr>
+                            <td colSpan={dates.length + 1} className={`p-0 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                              <div className="fixed inset-0 flex items-center justify-center z-40">
+                                <div className={`w-full max-w-3xl rounded-lg shadow-lg p-6 overflow-y-auto max-h-[80vh] ${isDarkMode ? 'bg-gray-800 text-white' : ''}`}>
+                                  <div className="flex justify-end">
+                                    <button onClick={() => setShowPropertyDetails(null)} className="text-gray-600 hover:text-gray-800 focus:outline-none">
+                                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                  </div>
+                                  <PropertyDetails property={property} isDarkMode={isDarkMode} /> {/* PropertyDetailsを表示 */}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className={`absolute right-0 top-1/2 transform -translate-y-1/2 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} bg-opacity-75 p-2 rounded-l-md shadow-md sm:hidden`}>
+              <ChevronRight className={`h-6 w-6 ${isDarkMode ? 'text-white' : 'text-gray-600'}`} />
+            </div>
+          </div>
+        </div>
+
+        {/* 物件情報入力フォームの代わりに以下のボタンを配置 */}
+        <div className={`mt-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow text-center`}>
+          <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>新しい物件を追加しませんか？</h3>
+          <p className={`mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>あなたの物件を登録して、新しい収入源を見つけましょう！</p>
+          <Link href="/add-property" className={`inline-block ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white font-medium py-3 px-6 rounded-md transition duration-150 ease-in-out`}>
+            物件を登録する
+          </Link>
+        </div>
+      </div>
+      <Footer isDarkMode={isDarkMode} />
+
+      {/* 予約フォーム */}
+      {showBookingForm && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-md rounded-lg shadow-lg p-6">
+            <h2 className="text-lg font-bold mb-4">予約報を入力</h2>
+            {properties
+              .filter(property => Object.keys(selectedDates).includes(property.id))
+              .map((property) => (
+                <div key={property.id} className="mb-4">
+                  <p className="font-bold">{property.title}</p>
+                  <ul>
+                    {selectedDates[property.id].map((date) => (
+                      <li key={date}>
+                        - {date}: ¥{property.price.toLocaleString()}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            <form onSubmit={handleBookingClick}>
+              <div className="mb-4">
+                <label htmlFor="name" className="block text-gray-700 font-bold mb-2">
+                  氏名
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="phone" className="block text-gray-700 font-bold mb-2">
+                  電話番
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="email" className="block text-gray-700 font-bold mb-2">
+                  メールアドレス
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <button
+                  type="submit"
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                >
+                  予約する
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBookingForm(false)}
+                  className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
-    </Layout>
+
+      {/* 合計金額と予約ボタン */}
+      {!showBookingCompleteModal && Object.keys(selectedDates).length > 0 && 
+        properties
+          .filter(property => Object.keys(selectedDates).includes(property.id))
+          .reduce((total, property) => total + property.price * selectedDates[property.id].length, 0) > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-blue-500 text-white p-4 flex justify-between items-center z-50">
+          <span className="font-bold text-lg">
+            合計金額: ¥
+            {properties
+              .filter(property => Object.keys(selectedDates).includes(property.id))
+              .reduce((total, property) => total + property.price * selectedDates[property.id].length, 0)
+              .toLocaleString()}
+          </span>
+          <button
+            onClick={() => setShowBookingForm(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            予約する
+          </button>
+        </div>
+      )}
+
+      {/* 支払いURLが設定されたら表示 */}
+      {showBookingCompleteModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-md rounded-lg shadow-lg p-6 flex flex-col items-center">
+            <div className="bg-yellow-500 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+              <CheckCircleIcon className="text-white w-6 h-6" />
+            </div>
+            <h2 className="text-2xl font-bold mb-4 text-center">予約仮押さえ完了</h2>
+            <p className="mb-4 text-center">
+              予約が仮押さえされました。1時間以内にお支払いを完了してください。
+            </p>
+            <p className="mb-6 text-center text-red-500 font-bold">
+              <CountdownTimer time={60 * 60} /> 以内に支払いが完了しない場合、自動的にキャンセルされます。
+            </p>
+            <a
+              href={`/payment/${paymentUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md text-lg transition duration-150 ease-in-out"
+            >
+              支払いに進む
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

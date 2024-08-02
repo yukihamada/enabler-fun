@@ -47,7 +47,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <nav className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <Link href="/" className="text-2xl font-bold text-blue-600 flex items-center">
-              <Image src="/logo.svg" alt="Enablerロゴ" width={80} height={80} className="mr-4" />
+              <Image src="/logo.svg" alt="Enablerロゴ" width={220} height={120} className="mr-4" />
             </Link>
             <div className="hidden md:flex space-x-6 items-center">
               <Link href="/" className="text-gray-600 hover:text-blue-600 transition duration-300 flex items-center">

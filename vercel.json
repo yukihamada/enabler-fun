@@ -1,0 +1,6 @@
+{
+  "crons": [{
+    "path": "/api/update-available-dates",
+    "schedule": "0 * * * *"
+  }]
+}

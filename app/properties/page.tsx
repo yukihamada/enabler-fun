@@ -252,19 +252,6 @@ function PropertyCard({ property, availabilityStatus, selectedDate }: { property
             )}
           </div>
 
-          {nearbyFacilities.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-2">周辺施設</h3>
-              <ul className="list-disc list-inside">
-                {nearbyFacilities.map((facility, index) => (
-                  <li key={index}>
-                    {facility.type}: {facility.name} ({facility.distance || '距離不明'})
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           <div className="mt-4">
             <span className={`px-2 py-1 rounded-full text-sm ${
               availabilityStatus === '今日利用可能' ? 'bg-green-200 text-green-800' :

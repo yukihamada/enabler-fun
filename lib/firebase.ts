@@ -1,8 +1,6 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
-import { getAnalytics, Analytics } from 'firebase/analytics';
+import { initializeApp, getApps } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -14,10 +12,8 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-export const app = initializeApp(firebaseConfig);
-export const firebaseApp = initializeApp(firebaseConfig);
-
-export const auth: Auth = getAuth(app);
-export const db: Firestore = getFirestore(app);
-export const storage: FirebaseStorage = getStorage(app);
-export const analytics: Analytics | null = typeof window !== 'undefined' ? getAnalytics(app) : null;
+// Firebase アプリの初期化
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0]; 
+// Firestoreの初期化
+export const db = getFirestore(app);
+export const storage = getStorage(app);

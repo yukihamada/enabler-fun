@@ -22,6 +22,7 @@ export default function AdminStorage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [previewUrls, setPreviewUrls] = useState<string[]>([])
 
   const copyToClipboard = (url: string) => {
     navigator.clipboard.writeText(url).then(() => {
@@ -71,7 +72,7 @@ export default function AdminStorage() {
     e.stopPropagation()
     setDragActive(false)
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      await handleFileUpload(e.dataTransfer.files[0])
+      await handleFileUpload(e.dataTransfer.files)
     }
   }
 
@@ -81,24 +82,42 @@ export default function AdminStorage() {
     return `${hash}.${extension}`
   }
 
-  const handleFileUpload = async (file: File) => {
-    if (!file) return
+  const handleFileUpload = async (files: FileList) => {
+    if (files.length === 0) return
 
     setUploading(true)
-    const hashedFileName = hashFileName(file.name)
-    const storageRef = ref(storage, `image/${hashedFileName}`);
-    try {
-      await uploadBytes(storageRef, file);
-      console.log('ファイルがアップロードされました');
-      await listFiles();
-    } catch (error) {
-      console.error('ファイルのアップロードに失敗しました:', error);
+    setError(null)
+    setPreviewUrls([])
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const hashedFileName = hashFileName(file.name)
+      const storageRef = ref(storage, `image/${hashedFileName}`)
+
+      try {
+        await uploadBytes(storageRef, file)
+        console.log(`ファイル "${file.name}" がアップロードされました`)
+      } catch (error) {
+        console.error(`ファイル "${file.name}" のアップロードに失敗しました:`, error)
+        if (error instanceof Error) {
+          setError(`アップロードエラー: ${error.message}`)
+        } else {
+          setError('ファイルのアップロード中に不明なエラーが発生しました')
+        }
+      }
     }
+
+    await listFiles()
     setUploading(false)
   }
 
-  const onButtonClick = () => {
-    fileInputRef.current?.click()
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      handleFileUpload(e.target.files)
+      // プレビュー用のURLを生成
+      const urls = Array.from(e.target.files).map(file => URL.createObjectURL(file))
+      setPreviewUrls(urls)
+    }
   }
 
   const handleDelete = async (fileRef: StorageReference) => {
@@ -132,19 +151,33 @@ export default function AdminStorage() {
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
-          onClick={onButtonClick}
+          onClick={() => fileInputRef.current?.click()}
         >
           <input
             type="file"
             ref={fileInputRef}
-            onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
+            onChange={handleFileSelect}
             style={{ display: 'none' }}
             accept="image/*"
+            multiple
           />
           <p className="text-center text-gray-600">
             {uploading ? 'アップロード中...' : 'ここにファイルをドラッグ＆ドロップするか、クリックしてファイルを選択してください'}
           </p>
         </div>
+
+        {previewUrls.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800">プレビュー</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {previewUrls.map((url, index) => (
+                <div key={index} className="relative h-40">
+                  <Image src={url} alt={`プレビュー ${index + 1}`} layout="fill" objectFit="cover" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <h2 className="text-2xl font-bold mb-4 text-gray-800">アップロード済みファイル</h2>
         {files.length > 0 ? (
